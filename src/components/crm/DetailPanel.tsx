@@ -348,6 +348,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
         </motion.div>
