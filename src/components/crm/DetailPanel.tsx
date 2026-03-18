@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
 import { STATUS_CONFIG, USERS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
+import { DocumentsView } from "./DocumentsView";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -36,7 +37,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [saving, setSaving] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
 
   const handleOpen = () => {
     if (lead) {
@@ -248,7 +249,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
               {/* Activity Tabs */}
               <div className="border-b border-border px-4 pt-3">
                 <div className="flex items-center gap-4">
-                  {(["all", "notes", "calls"] as const).map((tab) => (
+                  {(["all", "notes", "calls", "docs"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -258,12 +259,16 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                           : "border-transparent text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : "Actividad"}
+                      {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : tab === "calls" ? "Actividad" : "Docs"}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {activeTab === "docs" ? (
+                <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
+              ) : (
+              <>
               {/* Note Input */}
               <div className="px-4 py-3 border-b border-border">
                 <div className="flex gap-2">
@@ -343,6 +348,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
         </motion.div>
