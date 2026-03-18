@@ -265,6 +265,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                 </div>
               </div>
 
+              {activeTab === "docs" ? (
+                <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
+              ) : (
+              <>
               {/* Note Input */}
               <div className="px-4 py-3 border-b border-border">
                 <div className="flex gap-2">
