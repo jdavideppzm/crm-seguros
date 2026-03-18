@@ -39,12 +39,22 @@ export interface Note {
 
 export type ActivityType = "note" | "call" | "email" | "status_change";
 
+export interface ActivityComment {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
+}
+
 export interface Activity {
   id: string;
   type: ActivityType;
   text: string;
   author: string;
   createdAt: string;
+  editedAt?: string;
+  editedBy?: string;
+  comments?: ActivityComment[];
   meta?: {
     fromStatus?: string;
     toStatus?: string;
