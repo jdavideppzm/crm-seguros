@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
 import { STATUS_CONFIG, USERS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
+import { DocumentsView } from "./DocumentsView";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
