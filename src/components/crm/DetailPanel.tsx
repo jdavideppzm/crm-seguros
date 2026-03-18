@@ -48,7 +48,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     }
   };
 
-  const addActivity = (type: "note" | "call" | "status_change", text: string, meta?: Activity["meta"]): Activity => ({
+  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"]): Activity => ({
     id: Date.now().toString(),
     type,
     text,
