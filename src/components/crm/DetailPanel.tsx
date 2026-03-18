@@ -146,20 +146,23 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
               {/* Action Buttons */}
               <div className="flex items-center gap-2 mt-3">
                 <ActionButton icon={<StickyNote size={13} />} label="Nota" onClick={() => document.getElementById("note-input")?.focus()} />
-                {lead.email && (
-                  <ActionButton
-                    icon={<Mail size={13} />}
-                    label="Email"
-                    onClick={() => {
-                      window.open(`mailto:${lead.email}`, "_blank");
-                      const newActivities: Activity[] = [
-                        addActivity("email", `Correo enviado a ${lead.email}`),
-                        ...(lead.activities || []),
-                      ];
-                      onUpdateLead({ ...lead, activities: newActivities });
-                    }}
-                  />
-                )}
+                <ActionButton
+                  icon={<Mail size={13} />}
+                  label="Email"
+                  onClick={() => {
+                    const email = lead.email || prompt("Ingresa el email del cliente:");
+                    if (!email) return;
+                    if (!lead.email) {
+                      onUpdateLead({ ...lead, email });
+                    }
+                    window.open(`mailto:${email}`, "_blank");
+                    const newActivities: Activity[] = [
+                      addActivity("email", `Correo enviado a ${email}`),
+                      ...(lead.activities || []),
+                    ];
+                    onUpdateLead({ ...lead, email: email || lead.email, activities: newActivities });
+                  }}
+                />
                 {lead.phone && (
                   <ActionButton
                     icon={<MessageSquare size={13} />}
