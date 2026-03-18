@@ -9,6 +9,7 @@ import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
 import { STATUS_CONFIG, USERS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
+import { ActivityItem } from "./ActivityItem";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
