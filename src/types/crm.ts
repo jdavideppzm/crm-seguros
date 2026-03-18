@@ -25,6 +25,7 @@ export interface Lead {
   monto: number;
   assignedTo?: string;
   notes?: Note[];
+  activities?: Activity[];
 }
 
 export interface Note {
@@ -32,6 +33,21 @@ export interface Note {
   text: string;
   author: string;
   createdAt: string;
+}
+
+export type ActivityType = "note" | "call" | "email" | "status_change";
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  text: string;
+  author: string;
+  createdAt: string;
+  meta?: {
+    fromStatus?: string;
+    toStatus?: string;
+    duration?: string;
+  };
 }
 
 export const STATUS_CONFIG: Record<PipelineStatus, { label: string; cssVar: string }> = {
