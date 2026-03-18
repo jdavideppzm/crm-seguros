@@ -249,7 +249,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
               {/* Activity Tabs */}
               <div className="border-b border-border px-4 pt-3">
                 <div className="flex items-center gap-4">
-                  {(["all", "notes", "calls"] as const).map((tab) => (
+                  {(["all", "notes", "calls", "docs"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -259,7 +259,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                           : "border-transparent text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : "Actividad"}
+                      {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : tab === "calls" ? "Actividad" : "Docs"}
                     </button>
                   ))}
                 </div>
