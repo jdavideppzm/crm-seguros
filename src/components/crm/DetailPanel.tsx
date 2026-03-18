@@ -322,43 +322,19 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                     <div className="absolute left-[11px] top-3 bottom-3 w-px bg-border" />
 
                     <div className="space-y-1">
-                      {filteredActivities.map((activity) => {
-                        const config = activityTypeConfig[activity.type] || activityTypeConfig.note;
-                        const Icon = config.icon;
-
-                        return (
-                          <div key={activity.id} className="relative flex gap-3 py-2.5">
-                            {/* Timeline dot */}
-                            <div className={`relative z-10 w-[22px] h-[22px] rounded-full bg-card border-2 border-border flex items-center justify-center shrink-0`}>
-                              <Icon size={10} className={config.color} />
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  {activity.type === "status_change" && activity.meta ? (
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-xs text-muted-foreground">Estado:</span>
-                                      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">
-                                        {activity.meta.fromStatus}
-                                      </span>
-                                      <ArrowRight size={10} className="text-muted-foreground" />
-                                      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-status-lograr/10 text-status-lograr">
-                                        {activity.meta.toStatus}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs text-foreground">{activity.text}</p>
-                                  )}
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">{activity.author}</p>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{activity.createdAt}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {filteredActivities.map((activity) => (
+                        <ActivityItem
+                          key={activity.id}
+                          activity={activity}
+                          onUpdate={(updated) => {
+                            if (!lead) return;
+                            const newActivities = (lead.activities || []).map((a) =>
+                              a.id === updated.id ? updated : a
+                            );
+                            onUpdateLead({ ...lead, activities: newActivities });
+                          }}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
