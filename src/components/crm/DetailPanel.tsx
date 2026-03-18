@@ -149,7 +149,21 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   <ActionButton icon={<Mail size={13} />} label="Email" href={`mailto:${lead.email}`} />
                 )}
                 {lead.phone && (
-                  <ActionButton icon={<Phone size={13} />} label={lead.phone} href={`tel:${lead.phone}`} />
+                  <ActionButton
+                    icon={<MessageSquare size={13} />}
+                    label={lead.phone}
+                    onClick={() => {
+                      const phone = lead.phone.replace(/\D/g, "");
+                      const waUrl = `https://wa.me/${phone.startsWith("57") ? phone : "57" + phone}`;
+                      window.open(waUrl, "_blank");
+                      // Register activity
+                      const newActivities: Activity[] = [
+                        addActivity("call", `WhatsApp enviado a ${lead.phone}`),
+                        ...(lead.activities || []),
+                      ];
+                      onUpdateLead({ ...lead, activities: newActivities });
+                    }}
+                  />
                 )}
               </div>
             </div>
