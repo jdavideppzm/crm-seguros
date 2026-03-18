@@ -26,6 +26,8 @@ export interface Lead {
   assignedTo?: string;
   notes?: Note[];
   activities?: Activity[];
+  clientType?: ClientType;
+  documents?: LeadDocument[];
 }
 
 export interface Note {
