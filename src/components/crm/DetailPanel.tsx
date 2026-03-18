@@ -37,7 +37,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [saving, setSaving] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
 
   const handleOpen = () => {
     if (lead) {
