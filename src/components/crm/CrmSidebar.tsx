@@ -1,14 +1,15 @@
-import { BarChart3, LayoutGrid, Table2, Users, Bell, Search } from "lucide-react";
+import { BarChart3, CalendarDays, LayoutGrid, Table2, Users, Bell, Search } from "lucide-react";
 import type { PipelineStatus } from "@/types/crm";
 import { STATUS_CONFIG } from "@/types/crm";
 
 interface CrmSidebarProps {
-  activeView: "pipeline" | "kanban" | "reports";
-  onViewChange: (view: "pipeline" | "kanban" | "reports") => void;
+  activeView: "pipeline" | "kanban" | "reports" | "agenda";
+  onViewChange: (view: "pipeline" | "kanban" | "reports" | "agenda") => void;
   statusFilter: PipelineStatus | null;
   onStatusFilter: (status: PipelineStatus | null) => void;
   statusCounts: Record<PipelineStatus, number>;
   totalLeads: number;
+  scheduledCount?: number;
 }
 
 const statusOrder: PipelineStatus[] = [
