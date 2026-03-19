@@ -10,6 +10,7 @@ import { STATUS_CONFIG, USERS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
 import { ActivityItem } from "./ActivityItem";
+import { OpportunitiesSection } from "./OpportunitiesSection";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
