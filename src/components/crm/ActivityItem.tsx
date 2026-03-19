@@ -107,6 +107,11 @@ export function ActivityItem({ activity, onUpdate }: ActivityItemProps) {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {activity.scheduledAt && (
+              <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                📅 {activity.scheduledAt}
+              </span>
+            )}
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">{activity.createdAt}</span>
             {/* Action buttons - visible on hover */}
             <div className="hidden group-hover:flex items-center gap-0.5 ml-1">
