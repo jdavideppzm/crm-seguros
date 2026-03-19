@@ -29,6 +29,18 @@ export interface Lead {
   clientType?: ClientType;
   documents?: LeadDocument[];
   opportunities?: Opportunity[];
+  // Campos cliente
+  tipoIdentificacion?: string;
+  numeroIdentificacion?: string;
+  nombres?: string;
+  apellidos?: string;
+  sexo?: string;
+  fechaNacimiento?: string;
+  ciudad?: string;
+  departamento?: string;
+  referenciaVehiculo?: string;
+  clase?: string;
+  fasecolda?: string;
 }
 
 export interface Note {

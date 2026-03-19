@@ -3,6 +3,7 @@ import {
   X, Phone, Mail, MessageSquare, Save, StickyNote, PhoneCall,
   Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
   Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
+  CreditCard, Users, UserCircle, Building2,
 } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
