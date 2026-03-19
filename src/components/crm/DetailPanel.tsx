@@ -71,6 +71,11 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
 
     const newActivities: Activity[] = [...(lead.activities || [])];
 
+    // Build scheduled string
+    const scheduledStr = scheduledDate
+      ? `${scheduledDate.split("-").reverse().join("/")}${scheduledTime ? ` ${scheduledTime}` : ""}`
+      : undefined;
+
     // Track status change
     if (editState !== lead.state) {
       newActivities.unshift(
@@ -83,7 +88,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
 
     // Add note as activity
     if (newNote.trim()) {
-      newActivities.unshift(addActivity("note", newNote.trim()));
+      newActivities.unshift(addActivity(activityType, newNote.trim(), undefined, scheduledStr));
     }
 
     const notes: Note[] = [
@@ -97,6 +102,9 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
       onUpdateLead({ ...lead, state: editState, assignedTo: editAssigned, remark: editRemark, notes, activities: newActivities });
       setSaving(false);
       setNewNote("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setActivityType("note");
     }, 400);
   };
 
