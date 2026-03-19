@@ -55,12 +55,13 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     }
   };
 
-  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"]): Activity => ({
+  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"], scheduled?: string): Activity => ({
     id: Date.now().toString(),
     type,
     text,
     author: "Usuario",
     createdAt: new Date().toLocaleString("es-CO"),
+    ...(scheduled ? { scheduledAt: scheduled, leadId: lead?.id, leadName: lead?.propietario } : {}),
     meta,
   });
 
