@@ -28,6 +28,7 @@ export interface Lead {
   activities?: Activity[];
   clientType?: ClientType;
   documents?: LeadDocument[];
+  opportunities?: Opportunity[];
 }
 
 export interface Note {
@@ -122,3 +123,38 @@ export const COTIZACION_LABELS = [
 ];
 
 export const INSPECCION_LABEL = "Resultado de inspección";
+
+export type OpportunityType = "vehiculo" | "vida" | "educacion" | "hogar" | "salud" | "empresarial" | "otro";
+
+export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
+  vehiculo: "Vehículo",
+  vida: "Vida",
+  educacion: "Educación",
+  hogar: "Hogar",
+  salud: "Salud",
+  empresarial: "Empresarial",
+  otro: "Otro",
+};
+
+export type OpportunityStatus = "nueva" | "en_progreso" | "ganada" | "perdida" | "reactivar";
+
+export const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
+  nueva: "Nueva",
+  en_progreso: "En progreso",
+  ganada: "Ganada",
+  perdida: "Perdida",
+  reactivar: "Reactivar",
+};
+
+export interface Opportunity {
+  id: string;
+  type: OpportunityType;
+  status: OpportunityStatus;
+  description: string;
+  placa?: string;
+  url?: string;
+  monto?: number;
+  aseguradora?: string;
+  createdAt: string;
+  createdBy: string;
+}
