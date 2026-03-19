@@ -321,26 +321,58 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                 <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
               ) : (
               <>
-              {/* Note Input */}
-              <div className="px-4 py-3 border-b border-border">
+              {/* Activity Input */}
+              <div className="px-4 py-3 border-b border-border space-y-2">
                 <div className="flex gap-2">
+                  <select
+                    value={activityType}
+                    onChange={(e) => setActivityType(e.target.value as any)}
+                    className="text-xs py-2 px-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="note">📝 Nota</option>
+                    <option value="call">📞 Llamada</option>
+                    <option value="email">✉️ Email</option>
+                  </select>
                   <input
                     id="note-input"
                     type="text"
-                    placeholder="Agregar nota o comentario..."
+                    placeholder="Descripción de la actividad..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && newNote.trim() && handleSave()}
                     className="flex-1 text-xs py-2 px-3 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <CalendarDays size={12} className="text-muted-foreground shrink-0" />
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring flex-1"
+                    />
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring w-24"
+                    />
+                  </div>
                   <button
                     onClick={handleSave}
                     disabled={!newNote.trim() || saving}
-                    className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
+                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
                   >
-                    Enviar
+                    {scheduledDate ? "Programar" : "Enviar"}
                   </button>
                 </div>
+                {scheduledDate && (
+                  <p className="text-[10px] text-primary flex items-center gap-1">
+                    <Bell size={10} />
+                    Se agregará a la Agenda
+                  </p>
+                )}
               </div>
 
               {/* Timeline */}
