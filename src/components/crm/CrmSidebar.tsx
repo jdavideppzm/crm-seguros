@@ -27,7 +27,7 @@ const statusDotColor: Record<PipelineStatus, string> = {
   bienvenida: "bg-status-bienvenida",
 };
 
-export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads }: CrmSidebarProps) {
+export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0 }: CrmSidebarProps) {
   return (
     <aside className="w-56 shrink-0 bg-sidebar-dark-bg h-screen flex flex-col">
       {/* Brand */}
@@ -47,6 +47,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
       <nav className="px-3 space-y-0.5">
         <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />
         <NavItem icon={<LayoutGrid size={16} />} label="Kanban" active={activeView === "kanban"} onClick={() => onViewChange("kanban")} />
+        <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} onClick={() => onViewChange("agenda")} badge={scheduledCount > 0 ? scheduledCount : undefined} />
         <NavItem icon={<BarChart3 size={16} />} label="Reportes" active={activeView === "reports"} onClick={() => onViewChange("reports")} />
       </nav>
 
