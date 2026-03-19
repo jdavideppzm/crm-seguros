@@ -42,6 +42,9 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [clientFieldsOpen, setClientFieldsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [activityType, setActivityType] = useState<"note" | "call" | "email">("note");
 
   const handleOpen = () => {
     if (lead) {
