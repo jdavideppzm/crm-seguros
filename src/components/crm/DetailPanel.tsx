@@ -39,6 +39,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [editRemark, setEditRemark] = useState("");
   const [saving, setSaving] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(true);
+  const [clientFieldsOpen, setClientFieldsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
 
