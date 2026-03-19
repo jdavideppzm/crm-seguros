@@ -96,7 +96,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
   );
 }
 
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+function NavItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number }) {
   return (
     <button
       onClick={onClick}
@@ -107,7 +107,12 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; labe
       }`}
     >
       {icon}
-      {label}
+      <span className="flex-1 text-left">{label}</span>
+      {badge !== undefined && (
+        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white px-1">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
