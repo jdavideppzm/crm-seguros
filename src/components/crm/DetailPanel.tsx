@@ -3,6 +3,7 @@ import {
   X, Phone, Mail, MessageSquare, Save, StickyNote, PhoneCall,
   Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
   Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
+  CreditCard, Users, UserCircle, Building2,
 } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
@@ -38,6 +39,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [editRemark, setEditRemark] = useState("");
   const [saving, setSaving] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(true);
+  const [clientFieldsOpen, setClientFieldsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
 
@@ -190,17 +192,36 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
           <div className="flex-1 flex overflow-hidden">
             {/* LEFT: Details */}
             <div className="w-[220px] shrink-0 border-r border-border overflow-y-auto">
-              {/* ABOUT Section */}
-              <CollapsibleSection title="DATOS" icon={<User size={13} />} open={aboutOpen} onToggle={() => setAboutOpen(!aboutOpen)}>
+              {/* CONTACTO Section */}
+              <CollapsibleSection title="CONTACTO" icon={<Car size={13} />} open={aboutOpen} onToggle={() => setAboutOpen(!aboutOpen)}>
                 <div className="space-y-2.5">
-                  <DetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.lugar} />
+                  <DetailRow icon={<MapPin size={12} />} label="Ciudad circulación" value={lead.lugar} />
                   <DetailRow icon={<Car size={12} />} label="Placa" value={lead.placa || "—"} mono />
                   <DetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance} />
                   <DetailRow icon={<FileText size={12} />} label="Tipo" value={lead.tipoSeguro} />
                   <DetailRow icon={<DollarSign size={12} />} label="Monto" value={formatMonto(lead.monto)} mono />
-                  <DetailRow icon={<Calendar size={12} />} label="Fecha" value={lead.fecha} />
-                  <DetailRow icon={<Clock size={12} />} label="Seguimiento" value={`Día ${lead.followUp}`} />
+                  <DetailRow icon={<Calendar size={12} />} label="Fecha creación" value={lead.fecha} />
+                  <DetailRow icon={<Car size={12} />} label="Ref. vehículo" value={lead.referenciaVehiculo || "—"} />
+                </div>
+              </CollapsibleSection>
+
+              {/* CAMPOS CLIENTE Section */}
+              <CollapsibleSection title="CAMPOS CLIENTE" icon={<Users size={13} />} open={clientFieldsOpen} onToggle={() => setClientFieldsOpen(!clientFieldsOpen)}>
+                <div className="space-y-2.5">
+                  <DetailRow icon={<Mail size={12} />} label="Email" value={lead.email || "—"} />
+                  <DetailRow icon={<CreditCard size={12} />} label="Tipo identificación" value={lead.tipoIdentificacion || "—"} />
+                  <DetailRow icon={<Hash size={12} />} label="Nº identificación" value={lead.numeroIdentificacion || "—"} mono />
+                  <DetailRow icon={<User size={12} />} label="Nombres" value={lead.nombres || lead.propietario.split(" ").slice(0, -1).join(" ") || "—"} />
+                  <DetailRow icon={<User size={12} />} label="Apellidos" value={lead.apellidos || lead.propietario.split(" ").slice(-1).join(" ") || "—"} />
+                  <DetailRow icon={<UserCircle size={12} />} label="Sexo" value={lead.sexo || "—"} />
+                  <DetailRow icon={<Calendar size={12} />} label="Fecha nacimiento" value={lead.fechaNacimiento || "—"} />
+                  <DetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.ciudad || "—"} />
+                  <DetailRow icon={<Building2 size={12} />} label="Departamento" value={lead.departamento || "—"} />
+                  <DetailRow icon={<Phone size={12} />} label="Teléfono" value={lead.phone || "—"} />
+                  <DetailRow icon={<Car size={12} />} label="Clase" value={lead.clase || "—"} />
+                  <DetailRow icon={<Hash size={12} />} label="Fasecolda ID" value={lead.fasecolda || "—"} mono />
                   <DetailRow icon={<Hash size={12} />} label="Referencia" value={lead.reference || "—"} />
+                  <DetailRow icon={<Clock size={12} />} label="Seguimiento" value={`Día ${lead.followUp}`} />
                 </div>
               </CollapsibleSection>
 
