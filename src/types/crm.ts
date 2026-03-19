@@ -28,6 +28,7 @@ export interface Lead {
   activities?: Activity[];
   clientType?: ClientType;
   documents?: LeadDocument[];
+  opportunities?: Opportunity[];
 }
 
 export interface Note {

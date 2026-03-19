@@ -258,6 +258,9 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   </button>
                 </div>
               </CollapsibleSection>
+
+              {/* OPPORTUNITIES Section */}
+              <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} />
             </div>
 
             {/* RIGHT: Activity Timeline */}
