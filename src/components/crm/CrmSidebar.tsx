@@ -1,14 +1,15 @@
-import { BarChart3, LayoutGrid, Table2, Users, Bell, Search } from "lucide-react";
+import { BarChart3, CalendarDays, LayoutGrid, Table2, Users, Bell, Search } from "lucide-react";
 import type { PipelineStatus } from "@/types/crm";
 import { STATUS_CONFIG } from "@/types/crm";
 
 interface CrmSidebarProps {
-  activeView: "pipeline" | "kanban" | "reports";
-  onViewChange: (view: "pipeline" | "kanban" | "reports") => void;
+  activeView: "pipeline" | "kanban" | "reports" | "agenda";
+  onViewChange: (view: "pipeline" | "kanban" | "reports" | "agenda") => void;
   statusFilter: PipelineStatus | null;
   onStatusFilter: (status: PipelineStatus | null) => void;
   statusCounts: Record<PipelineStatus, number>;
   totalLeads: number;
+  scheduledCount?: number;
 }
 
 const statusOrder: PipelineStatus[] = [
@@ -26,7 +27,7 @@ const statusDotColor: Record<PipelineStatus, string> = {
   bienvenida: "bg-status-bienvenida",
 };
 
-export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads }: CrmSidebarProps) {
+export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0 }: CrmSidebarProps) {
   return (
     <aside className="w-56 shrink-0 bg-sidebar-dark-bg h-screen flex flex-col">
       {/* Brand */}
@@ -46,6 +47,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
       <nav className="px-3 space-y-0.5">
         <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />
         <NavItem icon={<LayoutGrid size={16} />} label="Kanban" active={activeView === "kanban"} onClick={() => onViewChange("kanban")} />
+        <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} onClick={() => onViewChange("agenda")} badge={scheduledCount > 0 ? scheduledCount : undefined} />
         <NavItem icon={<BarChart3 size={16} />} label="Reportes" active={activeView === "reports"} onClick={() => onViewChange("reports")} />
       </nav>
 
@@ -94,7 +96,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
   );
 }
 
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+function NavItem({ icon, label, active, onClick, badge }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number }) {
   return (
     <button
       onClick={onClick}
@@ -105,7 +107,12 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; labe
       }`}
     >
       {icon}
-      {label}
+      <span className="flex-1 text-left">{label}</span>
+      {badge !== undefined && (
+        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white px-1">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

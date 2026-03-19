@@ -65,9 +65,12 @@ export interface Activity {
   text: string;
   author: string;
   createdAt: string;
+  scheduledAt?: string;
   editedAt?: string;
   editedBy?: string;
   comments?: ActivityComment[];
+  leadId?: string;
+  leadName?: string;
   meta?: {
     fromStatus?: string;
     toStatus?: string;

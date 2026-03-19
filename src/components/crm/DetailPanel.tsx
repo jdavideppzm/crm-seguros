@@ -3,7 +3,7 @@ import {
   X, Phone, Mail, MessageSquare, Save, StickyNote, PhoneCall,
   Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
   Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
-  CreditCard, Users, UserCircle, Building2,
+  CreditCard, Users, UserCircle, Building2, CalendarDays, Bell,
 } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
@@ -42,6 +42,9 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [clientFieldsOpen, setClientFieldsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [activityType, setActivityType] = useState<"note" | "call" | "email">("note");
 
   const handleOpen = () => {
     if (lead) {
@@ -52,12 +55,13 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     }
   };
 
-  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"]): Activity => ({
+  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"], scheduled?: string): Activity => ({
     id: Date.now().toString(),
     type,
     text,
     author: "Usuario",
     createdAt: new Date().toLocaleString("es-CO"),
+    ...(scheduled ? { scheduledAt: scheduled, leadId: lead?.id, leadName: lead?.propietario } : {}),
     meta,
   });
 
@@ -66,6 +70,11 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     setSaving(true);
 
     const newActivities: Activity[] = [...(lead.activities || [])];
+
+    // Build scheduled string
+    const scheduledStr = scheduledDate
+      ? `${scheduledDate.split("-").reverse().join("/")}${scheduledTime ? ` ${scheduledTime}` : ""}`
+      : undefined;
 
     // Track status change
     if (editState !== lead.state) {
@@ -79,7 +88,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
 
     // Add note as activity
     if (newNote.trim()) {
-      newActivities.unshift(addActivity("note", newNote.trim()));
+      newActivities.unshift(addActivity(activityType, newNote.trim(), undefined, scheduledStr));
     }
 
     const notes: Note[] = [
@@ -93,6 +102,9 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
       onUpdateLead({ ...lead, state: editState, assignedTo: editAssigned, remark: editRemark, notes, activities: newActivities });
       setSaving(false);
       setNewNote("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setActivityType("note");
     }, 400);
   };
 
@@ -309,26 +321,58 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                 <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
               ) : (
               <>
-              {/* Note Input */}
-              <div className="px-4 py-3 border-b border-border">
+              {/* Activity Input */}
+              <div className="px-4 py-3 border-b border-border space-y-2">
                 <div className="flex gap-2">
+                  <select
+                    value={activityType}
+                    onChange={(e) => setActivityType(e.target.value as any)}
+                    className="text-xs py-2 px-2 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="note">📝 Nota</option>
+                    <option value="call">📞 Llamada</option>
+                    <option value="email">✉️ Email</option>
+                  </select>
                   <input
                     id="note-input"
                     type="text"
-                    placeholder="Agregar nota o comentario..."
+                    placeholder="Descripción de la actividad..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && newNote.trim() && handleSave()}
                     className="flex-1 text-xs py-2 px-3 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <CalendarDays size={12} className="text-muted-foreground shrink-0" />
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring flex-1"
+                    />
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring w-24"
+                    />
+                  </div>
                   <button
                     onClick={handleSave}
                     disabled={!newNote.trim() || saving}
-                    className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
+                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40"
                   >
-                    Enviar
+                    {scheduledDate ? "Programar" : "Enviar"}
                   </button>
                 </div>
+                {scheduledDate && (
+                  <p className="text-[10px] text-primary flex items-center gap-1">
+                    <Bell size={10} />
+                    Se agregará a la Agenda
+                  </p>
+                )}
               </div>
 
               {/* Timeline */}

@@ -7,10 +7,11 @@ import { LeadTable } from "@/components/crm/LeadTable";
 import { DetailPanel } from "@/components/crm/DetailPanel";
 import { ReportsView } from "@/components/crm/ReportsView";
 import { KanbanView } from "@/components/crm/KanbanView";
+import { AgendaView } from "@/components/crm/AgendaView";
 
 export default function Index() {
   const [leads, setLeads] = useState<Lead[]>(SEED_LEADS);
-  const [activeView, setActiveView] = useState<"pipeline" | "kanban" | "reports">("pipeline");
+  const [activeView, setActiveView] = useState<"pipeline" | "kanban" | "reports" | "agenda">("pipeline");
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -22,6 +23,16 @@ export default function Index() {
       acc[l.state] = (acc[l.state] || 0) + 1;
       return acc;
     }, {} as Record<PipelineStatus, number>);
+  }, [leads]);
+
+  const scheduledCount = useMemo(() => {
+    let count = 0;
+    leads.forEach((l) => {
+      (l.activities || []).forEach((a) => {
+        if (a.scheduledAt) count++;
+      });
+    });
+    return count;
   }, [leads]);
 
   const filteredLeads = useMemo(() => {
@@ -47,10 +58,11 @@ export default function Index() {
     setSelectedLead(updated);
   };
 
-  const viewTitles = {
+  const viewTitles: Record<string, string> = {
     pipeline: "Pipeline de Ventas",
     kanban: "Pipeline de Ventas",
     reports: "Reportes",
+    agenda: "Agenda",
   };
 
   const formatMonto = (m: number) =>
@@ -67,11 +79,12 @@ export default function Index() {
         onStatusFilter={setStatusFilter}
         statusCounts={statusCounts}
         totalLeads={leads.length}
+        scheduledCount={scheduledCount}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <CrmHeader
           title={viewTitles[activeView]}
-          subtitle={activeView !== "reports" ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}` : undefined}
+          subtitle={activeView !== "reports" && activeView !== "agenda" ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}` : activeView === "agenda" ? `${scheduledCount} actividades programadas` : undefined}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
@@ -97,6 +110,16 @@ export default function Index() {
           {activeView === "kanban" && (
             <>
               <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} />
+              <DetailPanel
+                lead={selectedLead}
+                onClose={() => setSelectedLead(null)}
+                onUpdateLead={handleUpdateLead}
+              />
+            </>
+          )}
+          {activeView === "agenda" && (
+            <>
+              <AgendaView leads={leads} onSelectLead={setSelectedLead} />
               <DetailPanel
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
