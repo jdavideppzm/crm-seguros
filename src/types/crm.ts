@@ -29,6 +29,7 @@ export interface Lead {
   clientType?: ClientType;
   documents?: LeadDocument[];
   opportunities?: Opportunity[];
+  selectedCotizacion?: string; // label of chosen cotización
   // Campos cliente
   tipoIdentificacion?: string;
   numeroIdentificacion?: string;
@@ -41,6 +42,10 @@ export interface Lead {
   referenciaVehiculo?: string;
   clase?: string;
   fasecolda?: string;
+  colorVehiculo?: string;
+  // Parent lead link (for opportunities that created new leads)
+  parentLeadId?: string;
+  opportunityType?: OpportunityType;
 }
 
 export interface Note {
@@ -50,7 +55,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type ActivityType = "note" | "call" | "email" | "status_change";
+export type ActivityType = "note" | "call" | "email" | "status_change" | "field_edit" | "whatsapp" | "doc_selected";
 
 export interface ActivityComment {
   id: string;
@@ -75,6 +80,9 @@ export interface Activity {
     fromStatus?: string;
     toStatus?: string;
     duration?: string;
+    field?: string;
+    oldValue?: string;
+    newValue?: string;
   };
 }
 
@@ -106,6 +114,7 @@ export interface LeadDocument {
   fileUrl?: string;
   uploadedAt?: string;
   uploadedBy?: string;
+  aseguradora?: string;
 }
 
 export const REQUIRED_DOCS: Record<ClientType, string[]> = {
@@ -121,11 +130,13 @@ export const REQUIRED_DOCS: Record<ClientType, string[]> = {
   natural: [
     "Foto de la cédula",
     "Foto de la tarjeta de propiedad",
+    "Formulario Sarlaft",
   ],
   cero_km: [
     "Foto de la cédula por ambos lados",
     "Foto del SOAT o la tarjeta de propiedad",
     "Factura proforma o factura final",
+    "Formulario Sarlaft",
   ],
 };
 
@@ -151,6 +162,45 @@ export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
   otro: "Otro",
 };
 
+// Fields specific to each opportunity type
+export const OPPORTUNITY_TYPE_FIELDS: Record<OpportunityType, { key: string; label: string; placeholder: string }[]> = {
+  vehiculo: [
+    { key: "placa", label: "Placa", placeholder: "ABC123" },
+    { key: "referencia", label: "Referencia vehículo", placeholder: "Mazda 3 2024" },
+    { key: "modelo", label: "Modelo/Año", placeholder: "2024" },
+    { key: "color", label: "Color", placeholder: "Blanco" },
+  ],
+  vida: [
+    { key: "beneficiarios", label: "Beneficiarios", placeholder: "Nombre de beneficiarios" },
+    { key: "sumaAsegurada", label: "Suma asegurada", placeholder: "100.000.000" },
+    { key: "planVida", label: "Plan", placeholder: "Plan vida integral" },
+  ],
+  educacion: [
+    { key: "institucion", label: "Institución", placeholder: "Universidad Nacional" },
+    { key: "valorMatricula", label: "Valor matrícula", placeholder: "5.000.000" },
+    { key: "programa", label: "Programa", placeholder: "Ingeniería de sistemas" },
+  ],
+  hogar: [
+    { key: "direccion", label: "Dirección inmueble", placeholder: "Calle 45 #12-34" },
+    { key: "valorInmueble", label: "Valor inmueble", placeholder: "300.000.000" },
+    { key: "tipoInmueble", label: "Tipo inmueble", placeholder: "Apartamento / Casa" },
+  ],
+  salud: [
+    { key: "eps", label: "EPS actual", placeholder: "Sura EPS" },
+    { key: "planSalud", label: "Plan salud", placeholder: "Plan complementario" },
+    { key: "cobertura", label: "Cobertura", placeholder: "Nacional" },
+  ],
+  empresarial: [
+    { key: "razonSocial", label: "Razón social", placeholder: "Empresa SAS" },
+    { key: "nit", label: "NIT", placeholder: "900.123.456-7" },
+    { key: "tipoRiesgo", label: "Tipo de riesgo", placeholder: "RC / Incendio / Transporte" },
+    { key: "numEmpleados", label: "Nº empleados", placeholder: "50" },
+  ],
+  otro: [
+    { key: "detalle", label: "Detalle", placeholder: "Descripción del seguro" },
+  ],
+};
+
 export type OpportunityStatus = "nueva" | "en_progreso" | "ganada" | "perdida" | "reactivar";
 
 export const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
@@ -172,4 +222,6 @@ export interface Opportunity {
   aseguradora?: string;
   createdAt: string;
   createdBy: string;
+  typeFields?: Record<string, string>;
+  linkedLeadId?: string;
 }

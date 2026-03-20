@@ -1,15 +1,18 @@
-import { BarChart3, CalendarDays, LayoutGrid, Table2, Users, Bell, Search } from "lucide-react";
+import { BarChart3, CalendarDays, LayoutGrid, Table2, Settings } from "lucide-react";
 import type { PipelineStatus } from "@/types/crm";
 import { STATUS_CONFIG } from "@/types/crm";
 
+type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings";
+
 interface CrmSidebarProps {
-  activeView: "pipeline" | "kanban" | "reports" | "agenda";
-  onViewChange: (view: "pipeline" | "kanban" | "reports" | "agenda") => void;
+  activeView: ViewType;
+  onViewChange: (view: ViewType) => void;
   statusFilter: PipelineStatus | null;
   onStatusFilter: (status: PipelineStatus | null) => void;
   statusCounts: Record<PipelineStatus, number>;
   totalLeads: number;
   scheduledCount?: number;
+  visibleViews?: Record<string, boolean>;
 }
 
 const statusOrder: PipelineStatus[] = [
@@ -27,7 +30,7 @@ const statusDotColor: Record<PipelineStatus, string> = {
   bienvenida: "bg-status-bienvenida",
 };
 
-export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0 }: CrmSidebarProps) {
+export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0, visibleViews = {} }: CrmSidebarProps) {
   return (
     <aside className="w-56 shrink-0 bg-sidebar-dark-bg h-screen flex flex-col">
       {/* Brand */}
@@ -45,10 +48,21 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
 
       {/* Nav */}
       <nav className="px-3 space-y-0.5">
-        <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />
-        <NavItem icon={<LayoutGrid size={16} />} label="Kanban" active={activeView === "kanban"} onClick={() => onViewChange("kanban")} />
-        <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} onClick={() => onViewChange("agenda")} badge={scheduledCount > 0 ? scheduledCount : undefined} />
-        <NavItem icon={<BarChart3 size={16} />} label="Reportes" active={activeView === "reports"} onClick={() => onViewChange("reports")} />
+        {visibleViews["pipeline"] !== false && (
+          <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />
+        )}
+        {visibleViews["kanban"] !== false && (
+          <NavItem icon={<LayoutGrid size={16} />} label="Kanban" active={activeView === "kanban"} onClick={() => onViewChange("kanban")} />
+        )}
+        {visibleViews["agenda"] !== false && (
+          <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} onClick={() => onViewChange("agenda")} badge={scheduledCount > 0 ? scheduledCount : undefined} />
+        )}
+        {visibleViews["reports"] !== false && (
+          <NavItem icon={<BarChart3 size={16} />} label="Reportes" active={activeView === "reports"} onClick={() => onViewChange("reports")} />
+        )}
+        <div className="pt-2 mt-2 border-t border-sidebar-dark-border">
+          <NavItem icon={<Settings size={16} />} label="Configuración" active={activeView === "settings"} onClick={() => onViewChange("settings")} />
+        </div>
       </nav>
 
       {/* Status Filters */}

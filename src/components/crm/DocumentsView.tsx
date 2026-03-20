@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FileText, Upload, Check, ChevronDown, Trash2, Eye } from "lucide-react";
-import type { Lead, ClientType, LeadDocument } from "@/types/crm";
+import { FileText, Upload, Check, ChevronDown, Trash2, Download, CheckCircle2 } from "lucide-react";
+import type { Lead, ClientType, LeadDocument, Activity } from "@/types/crm";
 import {
   CLIENT_TYPE_LABELS,
   REQUIRED_DOCS,
@@ -32,10 +32,21 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
   const handleUpload = (label: string) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*,.pdf,.doc,.docx";
+    input.accept = ".pdf";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+        alert("Solo se permiten archivos PDF.");
+        return;
+      }
+
+      // For cotización, ask for aseguradora name
+      let aseguradora: string | undefined;
+      if (COTIZACION_LABELS.includes(label)) {
+        aseguradora = prompt("Nombre de la aseguradora para esta cotización:") || undefined;
+      }
 
       const newDoc: LeadDocument = {
         id: Date.now().toString(),
@@ -44,6 +55,7 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
         fileUrl: URL.createObjectURL(file),
         uploadedAt: new Date().toLocaleString("es-CO"),
         uploadedBy: "Usuario",
+        aseguradora,
       };
 
       const updatedDocs = [...documents.filter((d) => d.label !== label), newDoc];
@@ -54,7 +66,51 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
 
   const handleRemove = (label: string) => {
     const updatedDocs = documents.filter((d) => d.label !== label);
-    onUpdateLead({ ...lead, documents: updatedDocs });
+    // If removing the selected cotización, clear selection
+    const updates: Partial<Lead> = { documents: updatedDocs };
+    if (lead.selectedCotizacion === label) {
+      updates.selectedCotizacion = undefined;
+    }
+    onUpdateLead({ ...lead, ...updates });
+  };
+
+  const handleSelectCotizacion = (label: string) => {
+    const doc = documents.find((d) => d.label === label);
+    if (!doc) return;
+
+    const isAlreadySelected = lead.selectedCotizacion === label;
+    const newSelection = isAlreadySelected ? undefined : label;
+
+    // Log activity
+    const newActivities: Activity[] = [...(lead.activities || [])];
+    if (!isAlreadySelected) {
+      newActivities.unshift({
+        id: Date.now().toString(),
+        type: "doc_selected",
+        text: `Cotización seleccionada: ${doc.aseguradora || label} (${doc.fileName})`,
+        author: "Usuario",
+        createdAt: new Date().toLocaleString("es-CO"),
+      });
+    }
+
+    // Update insurance if selecting
+    const updates: Partial<Lead> = {
+      selectedCotizacion: newSelection,
+      activities: newActivities,
+    };
+    if (!isAlreadySelected && doc.aseguradora) {
+      updates.insurance = doc.aseguradora;
+    }
+
+    onUpdateLead({ ...lead, ...updates });
+  };
+
+  const handleDownload = (doc: LeadDocument) => {
+    if (!doc.fileUrl) return;
+    const a = document.createElement("a");
+    a.href = doc.fileUrl;
+    a.download = doc.fileName || "documento.pdf";
+    a.click();
   };
 
   const requiredDocs = REQUIRED_DOCS[clientType];
@@ -116,16 +172,33 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
           documents={documents}
           onUpload={handleUpload}
           onRemove={handleRemove}
+          onDownload={handleDownload}
         />
 
         {/* Cotizaciones */}
-        <DocSection
-          title="Cotizaciones de pólizas"
-          labels={COTIZACION_LABELS}
-          documents={documents}
-          onUpload={handleUpload}
-          onRemove={handleRemove}
-        />
+        <div>
+          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Cotizaciones de pólizas
+          </h4>
+          <div className="space-y-1.5">
+            {COTIZACION_LABELS.map((label) => {
+              const doc = documents.find((d) => d.label === label);
+              const isSelected = lead.selectedCotizacion === label;
+              return (
+                <CotizacionRow
+                  key={label}
+                  label={label}
+                  doc={doc}
+                  isSelected={isSelected}
+                  onUpload={() => handleUpload(label)}
+                  onRemove={() => handleRemove(label)}
+                  onDownload={() => doc && handleDownload(doc)}
+                  onSelect={() => handleSelectCotizacion(label)}
+                />
+              );
+            })}
+          </div>
+        </div>
 
         {/* Inspección */}
         <DocSection
@@ -134,6 +207,7 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
           documents={documents}
           onUpload={handleUpload}
           onRemove={handleRemove}
+          onDownload={handleDownload}
         />
       </div>
     </div>
@@ -146,12 +220,14 @@ function DocSection({
   documents,
   onUpload,
   onRemove,
+  onDownload,
 }: {
   title: string;
   labels: string[];
   documents: LeadDocument[];
   onUpload: (label: string) => void;
   onRemove: (label: string) => void;
+  onDownload: (doc: LeadDocument) => void;
 }) {
   return (
     <div>
@@ -168,6 +244,7 @@ function DocSection({
               doc={doc}
               onUpload={() => onUpload(label)}
               onRemove={() => onRemove(label)}
+              onDownload={() => doc && onDownload(doc)}
             />
           );
         })}
@@ -181,11 +258,13 @@ function DocRow({
   doc,
   onUpload,
   onRemove,
+  onDownload,
 }: {
   label: string;
   doc?: LeadDocument;
   onUpload: () => void;
   onRemove: () => void;
+  onDownload: () => void;
 }) {
   return (
     <div
@@ -209,7 +288,7 @@ function DocRow({
         <p className="text-xs text-foreground truncate">{label}</p>
         {doc && (
           <p className="text-[10px] text-muted-foreground truncate">
-            {doc.fileName} · {doc.uploadedAt}
+            📄 {doc.fileName} · {doc.uploadedAt}
           </p>
         )}
       </div>
@@ -217,15 +296,13 @@ function DocRow({
       <div className="flex items-center gap-1 shrink-0">
         {doc ? (
           <>
-            {doc.fileUrl && (
-              <button
-                onClick={() => window.open(doc.fileUrl, "_blank")}
-                className="p-1 rounded hover:bg-muted transition-colors"
-                title="Ver documento"
-              >
-                <Eye size={12} className="text-muted-foreground" />
-              </button>
-            )}
+            <button
+              onClick={onDownload}
+              className="p-1 rounded hover:bg-muted transition-colors"
+              title="Descargar PDF"
+            >
+              <Download size={12} className="text-muted-foreground" />
+            </button>
             <button
               onClick={onRemove}
               className="p-1 rounded hover:bg-destructive/10 transition-colors"
@@ -240,10 +317,113 @@ function DocRow({
             className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors"
           >
             <Upload size={10} />
-            Subir
+            Subir PDF
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function CotizacionRow({
+  label,
+  doc,
+  isSelected,
+  onUpload,
+  onRemove,
+  onDownload,
+  onSelect,
+}: {
+  label: string;
+  doc?: LeadDocument;
+  isSelected: boolean;
+  onUpload: () => void;
+  onRemove: () => void;
+  onDownload: () => void;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      className={`rounded-lg border transition-colors ${
+        isSelected
+          ? "border-status-lograr/40 bg-status-lograr/5"
+          : doc
+          ? "border-primary/20 bg-primary/5"
+          : "border-border bg-muted/30 hover:bg-muted/50"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 px-3 py-2">
+        <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
+          isSelected ? "bg-status-lograr/15" : doc ? "bg-primary/10" : "bg-muted"
+        }`}>
+          {isSelected ? (
+            <CheckCircle2 size={12} className="text-status-lograr" />
+          ) : doc ? (
+            <Check size={12} className="text-primary" />
+          ) : (
+            <FileText size={12} className="text-muted-foreground" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-foreground truncate">{label}</p>
+          {doc && (
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-muted-foreground truncate">
+                📄 {doc.fileName}
+              </p>
+              {doc.aseguradora && (
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                  isSelected
+                    ? "bg-status-lograr/15 text-status-lograr"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  🛡 {doc.aseguradora}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {doc ? (
+            <>
+              <button
+                onClick={onSelect}
+                className={`p-1.5 rounded-md transition-colors text-[10px] font-bold ${
+                  isSelected
+                    ? "bg-status-lograr/15 text-status-lograr"
+                    : "bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                }`}
+                title={isSelected ? "Deseleccionar" : "Elegir esta cotización"}
+              >
+                {isSelected ? "✓ Elegida" : "Elegir"}
+              </button>
+              <button onClick={onDownload} className="p-1 rounded hover:bg-muted transition-colors" title="Descargar PDF">
+                <Download size={12} className="text-muted-foreground" />
+              </button>
+              <button onClick={onRemove} className="p-1 rounded hover:bg-destructive/10 transition-colors" title="Eliminar">
+                <Trash2 size={12} className="text-destructive" />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onUpload}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors"
+            >
+              <Upload size={10} />
+              Subir PDF
+            </button>
+          )}
+        </div>
+      </div>
+      {isSelected && (
+        <div className="px-3 pb-2 pt-0">
+          <p className="text-[10px] font-medium text-status-lograr">
+            ✅ Cotización elegida por el cliente — aseguradora actualizada en el CRM
+          </p>
+        </div>
+      )}
     </div>
   );
 }
