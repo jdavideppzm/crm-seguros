@@ -4,6 +4,7 @@ import {
   Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
   Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
   CreditCard, Users, UserCircle, Building2, CalendarDays, Bell,
+  Pencil, Check, Palette,
 } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity } from "@/types/crm";
@@ -19,6 +20,7 @@ interface DetailPanelProps {
   lead: Lead | null;
   onClose: () => void;
   onUpdateLead: (lead: Lead) => void;
+  onCreateLeadFromOpportunity?: (parentLead: Lead, opportunity: any) => void;
 }
 
 const allStatuses: PipelineStatus[] = [
@@ -29,10 +31,13 @@ const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: strin
   note: { icon: StickyNote, color: "text-status-seguimiento", label: "Nota" },
   call: { icon: PhoneCall, color: "text-status-lograr", label: "Llamada" },
   email: { icon: Mail, color: "text-status-bienvenida", label: "Email" },
+  whatsapp: { icon: MessageSquare, color: "text-status-lograr", label: "WhatsApp" },
   status_change: { icon: ActivityIcon, color: "text-status-emitir", label: "Cambio de estado" },
+  field_edit: { icon: Pencil, color: "text-status-recolectar", label: "Edición" },
+  doc_selected: { icon: FileText, color: "text-primary", label: "Cotización seleccionada" },
 };
 
-export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
+export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity }: DetailPanelProps) {
   const [newNote, setNewNote] = useState("");
   const [editState, setEditState] = useState<PipelineStatus | null>(null);
   const [editAssigned, setEditAssigned] = useState("");
@@ -44,7 +49,11 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
   const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [activityType, setActivityType] = useState<"note" | "call" | "email">("note");
+  const [activityType, setActivityType] = useState<"note" | "call" | "email" | "whatsapp">("note");
+
+  // Editable contact fields
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editFieldValue, setEditFieldValue] = useState("");
 
   const handleOpen = () => {
     if (lead) {
@@ -55,8 +64,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     }
   };
 
-  const addActivity = (type: "note" | "call" | "email" | "status_change", text: string, meta?: Activity["meta"], scheduled?: string): Activity => ({
-    id: Date.now().toString(),
+  const addActivity = (type: Activity["type"], text: string, meta?: Activity["meta"], scheduled?: string): Activity => ({
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
     type,
     text,
     author: "Usuario",
@@ -76,17 +85,20 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
       ? `${scheduledDate.split("-").reverse().join("/")}${scheduledTime ? ` ${scheduledTime}` : ""}`
       : undefined;
 
-    // Track status change
+    // Track status change with remark as comment
     if (editState !== lead.state) {
+      const statusText = editRemark.trim() && editRemark !== lead.remark
+        ? `Estado cambiado · "${editRemark.trim()}"`
+        : `Estado cambiado`;
       newActivities.unshift(
-        addActivity("status_change", `Estado cambiado`, {
+        addActivity("status_change", statusText, {
           fromStatus: STATUS_CONFIG[lead.state].label,
           toStatus: STATUS_CONFIG[editState].label,
         })
       );
     }
 
-    // Add note as activity
+    // Add note as activity (no scheduling required)
     if (newNote.trim()) {
       newActivities.unshift(addActivity(activityType, newNote.trim(), undefined, scheduledStr));
     }
@@ -108,13 +120,31 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
     }, 400);
   };
 
+  const handleFieldEdit = (fieldKey: string, fieldLabel: string, oldValue: string, newValue: string) => {
+    if (!lead || newValue === oldValue) {
+      setEditingField(null);
+      return;
+    }
+    const newActivities: Activity[] = [
+      addActivity("field_edit", `${fieldLabel}: "${oldValue || '—'}" → "${newValue}"`, {
+        field: fieldKey,
+        oldValue: oldValue || "—",
+        newValue,
+      }),
+      ...(lead.activities || []),
+    ];
+    const updated = { ...lead, [fieldKey]: newValue, activities: newActivities };
+    onUpdateLead(updated);
+    setEditingField(null);
+  };
+
   const formatMonto = (m: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
 
   const filteredActivities = (lead?.activities || []).filter((a) => {
     if (activeTab === "all") return true;
     if (activeTab === "notes") return a.type === "note";
-    if (activeTab === "calls") return a.type === "call" || a.type === "status_change";
+    if (activeTab === "calls") return a.type === "call" || a.type === "status_change" || a.type === "field_edit" || a.type === "whatsapp" || a.type === "doc_selected";
     return true;
   });
 
@@ -128,11 +158,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
           exit={{ x: "100%" }}
           transition={transition}
           onAnimationComplete={() => handleOpen()}
-          className="w-[560px] shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden"
+          className="w-[640px] shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden"
         >
           {/* Top Header */}
           <div className="border-b border-border bg-card sticky top-0 z-10">
-            {/* Close & Back */}
             <div className="flex items-center justify-between px-5 py-2.5">
               <button onClick={onClose} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
                 <X size={14} />
@@ -149,12 +178,16 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-foreground leading-tight">{lead.propietario}</h2>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-0.5">
                       <StatusBadge status={lead.state} />
-                      {lead.assignedTo && (
-                        <span className="text-xs text-muted-foreground">· {lead.assignedTo}</span>
-                      )}
+                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                        <Shield size={10} />
+                        {lead.insurance}
+                      </span>
                     </div>
+                    {lead.assignedTo && (
+                      <span className="text-[11px] text-muted-foreground">Asignado: {lead.assignedTo}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -168,9 +201,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   onClick={() => {
                     const email = lead.email || prompt("Ingresa el email del cliente:");
                     if (!email) return;
-                    if (!lead.email) {
-                      onUpdateLead({ ...lead, email });
-                    }
+                    if (!lead.email) onUpdateLead({ ...lead, email });
                     window.open(`mailto:${email}`, "_blank");
                     const newActivities: Activity[] = [
                       addActivity("email", `Correo enviado a ${email}`),
@@ -187,9 +218,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                       const phone = lead.phone.replace(/\D/g, "");
                       const waUrl = `https://wa.me/${phone.startsWith("57") ? phone : "57" + phone}`;
                       window.open(waUrl, "_blank");
-                      // Register activity
                       const newActivities: Activity[] = [
-                        addActivity("call", `WhatsApp enviado a ${lead.phone}`),
+                        addActivity("whatsapp", `WhatsApp enviado a ${lead.phone}`),
                         ...(lead.activities || []),
                       ];
                       onUpdateLead({ ...lead, activities: newActivities });
@@ -203,36 +233,37 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
           {/* Two-column content */}
           <div className="flex-1 flex overflow-hidden">
             {/* LEFT: Details */}
-            <div className="w-[220px] shrink-0 border-r border-border overflow-y-auto">
+            <div className="w-[260px] shrink-0 border-r border-border overflow-y-auto">
               {/* CONTACTO Section */}
               <CollapsibleSection title="CONTACTO" icon={<Car size={13} />} open={aboutOpen} onToggle={() => setAboutOpen(!aboutOpen)}>
                 <div className="space-y-2.5">
-                  <DetailRow icon={<MapPin size={12} />} label="Ciudad circulación" value={lead.lugar} />
-                  <DetailRow icon={<Car size={12} />} label="Placa" value={lead.placa || "—"} mono />
-                  <DetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance} />
-                  <DetailRow icon={<FileText size={12} />} label="Tipo" value={lead.tipoSeguro} />
+                  <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad circulación" value={lead.lugar} fieldKey="lugar" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Car size={12} />} label="Placa" value={lead.placa || "—"} fieldKey="placa" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance} fieldKey="insurance" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<FileText size={12} />} label="Tipo" value={lead.tipoSeguro} fieldKey="tipoSeguro" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
                   <DetailRow icon={<DollarSign size={12} />} label="Monto" value={formatMonto(lead.monto)} mono />
                   <DetailRow icon={<Calendar size={12} />} label="Fecha creación" value={lead.fecha} />
-                  <DetailRow icon={<Car size={12} />} label="Ref. vehículo" value={lead.referenciaVehiculo || "—"} />
+                  <EditableDetailRow icon={<Car size={12} />} label="Ref. vehículo" value={lead.referenciaVehiculo || "—"} fieldKey="referenciaVehiculo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
                 </div>
               </CollapsibleSection>
 
               {/* CAMPOS CLIENTE Section */}
               <CollapsibleSection title="CAMPOS CLIENTE" icon={<Users size={13} />} open={clientFieldsOpen} onToggle={() => setClientFieldsOpen(!clientFieldsOpen)}>
                 <div className="space-y-2.5">
-                  <DetailRow icon={<Mail size={12} />} label="Email" value={lead.email || "—"} />
-                  <DetailRow icon={<CreditCard size={12} />} label="Tipo identificación" value={lead.tipoIdentificacion || "—"} />
-                  <DetailRow icon={<Hash size={12} />} label="Nº identificación" value={lead.numeroIdentificacion || "—"} mono />
-                  <DetailRow icon={<User size={12} />} label="Nombres" value={lead.nombres || lead.propietario.split(" ").slice(0, -1).join(" ") || "—"} />
-                  <DetailRow icon={<User size={12} />} label="Apellidos" value={lead.apellidos || lead.propietario.split(" ").slice(-1).join(" ") || "—"} />
-                  <DetailRow icon={<UserCircle size={12} />} label="Sexo" value={lead.sexo || "—"} />
-                  <DetailRow icon={<Calendar size={12} />} label="Fecha nacimiento" value={lead.fechaNacimiento || "—"} />
-                  <DetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.ciudad || "—"} />
-                  <DetailRow icon={<Building2 size={12} />} label="Departamento" value={lead.departamento || "—"} />
-                  <DetailRow icon={<Phone size={12} />} label="Teléfono" value={lead.phone || "—"} />
-                  <DetailRow icon={<Car size={12} />} label="Clase" value={lead.clase || "—"} />
-                  <DetailRow icon={<Hash size={12} />} label="Fasecolda ID" value={lead.fasecolda || "—"} mono />
-                  <DetailRow icon={<Hash size={12} />} label="Referencia" value={lead.reference || "—"} />
+                  <EditableDetailRow icon={<Mail size={12} />} label="Email" value={lead.email || "—"} fieldKey="email" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<CreditCard size={12} />} label="Tipo identificación" value={lead.tipoIdentificacion || "—"} fieldKey="tipoIdentificacion" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Hash size={12} />} label="Nº identificación" value={lead.numeroIdentificacion || "—"} fieldKey="numeroIdentificacion" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<User size={12} />} label="Nombres" value={lead.nombres || lead.propietario.split(" ").slice(0, -1).join(" ") || "—"} fieldKey="nombres" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<User size={12} />} label="Apellidos" value={lead.apellidos || lead.propietario.split(" ").slice(-1).join(" ") || "—"} fieldKey="apellidos" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<UserCircle size={12} />} label="Sexo" value={lead.sexo || "—"} fieldKey="sexo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Calendar size={12} />} label="Fecha nacimiento" value={lead.fechaNacimiento || "—"} fieldKey="fechaNacimiento" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.ciudad || "—"} fieldKey="ciudad" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Building2 size={12} />} label="Departamento" value={lead.departamento || "—"} fieldKey="departamento" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Phone size={12} />} label="Teléfono" value={lead.phone || "—"} fieldKey="phone" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Car size={12} />} label="Clase" value={lead.clase || "—"} fieldKey="clase" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Palette size={12} />} label="Color vehículo" value={lead.colorVehiculo || "—"} fieldKey="colorVehiculo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Hash size={12} />} label="Fasecolda ID" value={lead.fasecolda || "—"} fieldKey="fasecolda" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
+                  <EditableDetailRow icon={<Hash size={12} />} label="Referencia" value={lead.reference || "—"} fieldKey="reference" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => handleFieldEdit(k, l, old, nv)} onCancelEdit={() => setEditingField(null)} />
                   <DetailRow icon={<Clock size={12} />} label="Seguimiento" value={`Día ${lead.followUp}`} />
                 </div>
               </CollapsibleSection>
@@ -293,7 +324,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
               </CollapsibleSection>
 
               {/* OPPORTUNITIES Section */}
-              <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} />
+              <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} onCreateLeadFromOpportunity={onCreateLeadFromOpportunity} />
             </div>
 
             {/* RIGHT: Activity Timeline */}
@@ -332,6 +363,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                     <option value="note">📝 Nota</option>
                     <option value="call">📞 Llamada</option>
                     <option value="email">✉️ Email</option>
+                    <option value="whatsapp">💬 WhatsApp</option>
                   </select>
                   <input
                     id="note-input"
@@ -373,6 +405,11 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                     Se agregará a la Agenda
                   </p>
                 )}
+                {!scheduledDate && (
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    💡 Sin fecha = nota rápida (no aparece en Agenda)
+                  </p>
+                )}
               </div>
 
               {/* Timeline */}
@@ -387,9 +424,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead }: DetailPanelProps) {
                   </div>
                 ) : (
                   <div className="relative">
-                    {/* Timeline line */}
                     <div className="absolute left-[11px] top-3 bottom-3 w-px bg-border" />
-
                     <div className="space-y-1">
                       {filteredActivities.map((activity) => (
                         <ActivityItem
@@ -450,6 +485,63 @@ function DetailRow({ icon, label, value, mono }: { icon: React.ReactNode; label:
       <div className="min-w-0">
         <p className="text-[10px] text-muted-foreground">{label}</p>
         <p className={`text-xs text-foreground truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function EditableDetailRow({
+  icon, label, value, fieldKey, mono, editingField,
+  onStartEdit, editFieldValue, onEditFieldChange, onSaveEdit, onCancelEdit,
+}: {
+  icon: React.ReactNode; label: string; value: string; fieldKey: string; mono?: boolean;
+  editingField: string | null;
+  onStartEdit: (key: string, currentValue: string) => void;
+  editFieldValue: string;
+  onEditFieldChange: (v: string) => void;
+  onSaveEdit: (key: string, label: string, oldValue: string, newValue: string) => void;
+  onCancelEdit: () => void;
+}) {
+  const isEditing = editingField === fieldKey;
+
+  if (isEditing) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+          <div className="flex items-center gap-1">
+            <input
+              value={editFieldValue}
+              onChange={(e) => onEditFieldChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSaveEdit(fieldKey, label, value, editFieldValue);
+                if (e.key === "Escape") onCancelEdit();
+              }}
+              className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+              autoFocus
+            />
+            <button onClick={() => onSaveEdit(fieldKey, label, value, editFieldValue)} className="p-0.5 text-primary hover:text-primary/80">
+              <Check size={11} />
+            </button>
+            <button onClick={onCancelEdit} className="p-0.5 text-muted-foreground hover:text-foreground">
+              <X size={11} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-2 group cursor-pointer" onClick={() => onStartEdit(fieldKey, value === "—" ? "" : value)}>
+      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+        <div className="flex items-center gap-1">
+          <p className={`text-xs text-foreground truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+          <Pencil size={9} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+        </div>
       </div>
     </div>
   );

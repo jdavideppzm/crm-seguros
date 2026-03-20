@@ -1,12 +1,14 @@
 import type { Lead, PipelineStatus } from "@/types/crm";
 import { STATUS_CONFIG } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
+import type { CustomReportSection } from "./SettingsView";
 
 interface ReportsViewProps {
   leads: Lead[];
+  customSections?: CustomReportSection[];
 }
 
-export function ReportsView({ leads }: ReportsViewProps) {
+export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
   const formatMonto = (m: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
 
@@ -22,6 +24,19 @@ export function ReportsView({ leads }: ReportsViewProps) {
     ).sort((a, b) => b[1].total - a[1].total);
 
   const totalMonto = leads.reduce((s, l) => s + l.monto, 0);
+
+  const getGroupByFn = (groupBy: string): (l: Lead) => string => {
+    switch (groupBy) {
+      case "state": return (l) => l.state;
+      case "assignedTo": return (l) => l.assignedTo || "Sin asignar";
+      case "lugar": return (l) => l.lugar;
+      case "tipoSeguro": return (l) => l.tipoSeguro;
+      case "insurance": return (l) => l.insurance;
+      default: return (l) => l.state;
+    }
+  };
+
+  const visibleCustom = customSections.filter((s) => s.visible);
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -77,6 +92,43 @@ export function ReportsView({ leads }: ReportsViewProps) {
             </div>
           ))}
         </ReportCard>
+
+        {/* Custom Sections */}
+        {visibleCustom.map((section) => {
+          const data = aggregate(getGroupByFn(section.groupBy));
+          return (
+            <ReportCard key={section.id} title={section.title}>
+              {section.type === "metric" ? (
+                <div className="py-4 text-center">
+                  <p className="text-3xl font-bold text-foreground">{data.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">categorías · {formatMonto(data.reduce((s, [, d]) => s + d.total, 0))}</p>
+                </div>
+              ) : section.type === "pie" ? (
+                <div className="space-y-1.5">
+                  {data.map(([label, d]) => {
+                    const pct = totalMonto > 0 ? Math.round((d.total / totalMonto) * 100) : 0;
+                    return (
+                      <div key={label} className="flex items-center gap-2 py-1">
+                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-foreground flex-1">{label}</span>
+                        <span className="text-[11px] font-mono text-muted-foreground">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                data.map(([label, d]) => (
+                  <div key={label} className="flex items-center justify-between py-2">
+                    <span className="text-sm text-foreground">{label} <span className="text-xs text-muted-foreground">({d.count})</span></span>
+                    <span className="font-mono text-sm font-medium text-foreground">{formatMonto(d.total)}</span>
+                  </div>
+                ))
+              )}
+            </ReportCard>
+          );
+        })}
       </div>
     </div>
   );

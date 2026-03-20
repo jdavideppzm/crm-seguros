@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import type { Lead, Opportunity, OpportunityType, OpportunityStatus } from "@/types/crm";
 import {
-  OPPORTUNITY_TYPE_LABELS, OPPORTUNITY_STATUS_LABELS, USERS,
+  OPPORTUNITY_TYPE_LABELS, OPPORTUNITY_STATUS_LABELS, OPPORTUNITY_TYPE_FIELDS, USERS,
 } from "@/types/crm";
 
 const TYPE_ICONS: Record<OpportunityType, typeof Car> = {
@@ -29,14 +29,16 @@ const STATUS_COLORS: Record<OpportunityStatus, string> = {
 interface Props {
   lead: Lead;
   onUpdateLead: (lead: Lead) => void;
+  onCreateLeadFromOpportunity?: (parentLead: Lead, opportunity: Opportunity) => void;
 }
 
-export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
+export function OpportunitiesSection({ lead, onUpdateLead, onCreateLeadFromOpportunity }: Props) {
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState<Partial<Opportunity>>({ type: "vehiculo", status: "nueva" });
+  const [form, setForm] = useState<Partial<Opportunity> & { typeFields?: Record<string, string> }>({ type: "vehiculo", status: "nueva", typeFields: {} });
 
   const opportunities = lead.opportunities || [];
+  const currentTypeFields = OPPORTUNITY_TYPE_FIELDS[(form.type || "vehiculo") as OpportunityType] || [];
 
   const handleAdd = () => {
     if (!form.type || !form.description?.trim()) return;
@@ -45,15 +47,37 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
       type: form.type as OpportunityType,
       status: (form.status || "nueva") as OpportunityStatus,
       description: form.description.trim(),
-      placa: form.placa?.trim() || undefined,
+      placa: form.typeFields?.placa?.trim() || form.placa?.trim() || undefined,
       url: form.url?.trim() || undefined,
       monto: form.monto || undefined,
       aseguradora: form.aseguradora?.trim() || undefined,
       createdAt: new Date().toLocaleString("es-CO"),
       createdBy: "Usuario",
+      typeFields: form.typeFields,
     };
-    onUpdateLead({ ...lead, opportunities: [...opportunities, opp] });
-    setForm({ type: "vehiculo", status: "nueva" });
+
+    const updatedOpportunities = [...opportunities, opp];
+    
+    // Add activity
+    const newActivities = [
+      {
+        id: Date.now().toString() + "_opp",
+        type: "note" as const,
+        text: `Nueva oportunidad: ${OPPORTUNITY_TYPE_LABELS[opp.type]} — ${opp.description}`,
+        author: "Usuario",
+        createdAt: new Date().toLocaleString("es-CO"),
+      },
+      ...(lead.activities || []),
+    ];
+
+    onUpdateLead({ ...lead, opportunities: updatedOpportunities, activities: newActivities });
+
+    // Create linked lead
+    if (onCreateLeadFromOpportunity) {
+      onCreateLeadFromOpportunity(lead, opp);
+    }
+
+    setForm({ type: "vehiculo", status: "nueva", typeFields: {} });
     setAdding(false);
   };
 
@@ -91,7 +115,6 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
 
       {open && (
         <div className="px-4 pb-3 space-y-2">
-          {/* Existing opportunities */}
           {opportunities.map((opp) => {
             const Icon = TYPE_ICONS[opp.type];
             return (
@@ -107,6 +130,17 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
                 </div>
 
                 <p className="text-[11px] text-foreground/80 leading-snug">{opp.description}</p>
+
+                {/* Type-specific fields */}
+                {opp.typeFields && Object.entries(opp.typeFields).length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(opp.typeFields).filter(([, v]) => v).map(([k, v]) => (
+                      <span key={k} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-1">
                   <select
@@ -135,7 +169,6 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
             );
           })}
 
-          {/* Empty state */}
           {opportunities.length === 0 && !adding && (
             <div className="text-center py-3">
               <p className="text-[11px] text-muted-foreground">Sin oportunidades</p>
@@ -157,7 +190,7 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
 
               <select
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as OpportunityType })}
+                onChange={(e) => setForm({ ...form, type: e.target.value as OpportunityType, typeFields: {} })}
                 className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md"
               >
                 {Object.entries(OPPORTUNITY_TYPE_LABELS).map(([k, v]) => (
@@ -172,18 +205,38 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
                 className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md"
               />
 
+              {/* Type-specific fields */}
+              {currentTypeFields.length > 0 && (
+                <div className="space-y-1.5 pt-1 border-t border-border/50">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Campos {OPPORTUNITY_TYPE_LABELS[(form.type || "vehiculo") as OpportunityType]}</p>
+                  {currentTypeFields.map((field) => (
+                    <input
+                      key={field.key}
+                      placeholder={`${field.label}: ${field.placeholder}`}
+                      value={form.typeFields?.[field.key] || ""}
+                      onChange={(e) => setForm({
+                        ...form,
+                        typeFields: { ...form.typeFields, [field.key]: e.target.value },
+                      })}
+                      className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md"
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-1.5">
-                <input
-                  placeholder="Placa"
-                  value={form.placa || ""}
-                  onChange={(e) => setForm({ ...form, placa: e.target.value })}
-                  className="text-xs py-1.5 px-2 bg-background border border-border rounded-md font-mono"
-                />
                 <input
                   placeholder="Aseguradora"
                   value={form.aseguradora || ""}
                   onChange={(e) => setForm({ ...form, aseguradora: e.target.value })}
                   className="text-xs py-1.5 px-2 bg-background border border-border rounded-md"
+                />
+                <input
+                  placeholder="Monto"
+                  type="number"
+                  value={form.monto || ""}
+                  onChange={(e) => setForm({ ...form, monto: Number(e.target.value) || undefined })}
+                  className="text-xs py-1.5 px-2 bg-background border border-border rounded-md font-mono"
                 />
               </div>
 
@@ -194,12 +247,16 @@ export function OpportunitiesSection({ lead, onUpdateLead }: Props) {
                 className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md"
               />
 
+              <p className="text-[10px] text-muted-foreground">
+                💡 Al agregar, se creará un nuevo lead vinculado a este cliente.
+              </p>
+
               <button
                 onClick={handleAdd}
                 disabled={!form.description?.trim()}
                 className="w-full text-xs py-1.5 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors"
               >
-                Agregar
+                Agregar oportunidad
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import type { Lead, PipelineStatus } from "@/types/crm";
+import type { Lead, PipelineStatus, Opportunity, OpportunityType } from "@/types/crm";
 import { SEED_LEADS } from "@/data/seedData";
+import { OPPORTUNITY_TYPE_LABELS } from "@/types/crm";
 import { CrmSidebar } from "@/components/crm/CrmSidebar";
 import { CrmHeader } from "@/components/crm/CrmHeader";
 import { LeadTable } from "@/components/crm/LeadTable";
@@ -8,15 +9,22 @@ import { DetailPanel } from "@/components/crm/DetailPanel";
 import { ReportsView } from "@/components/crm/ReportsView";
 import { KanbanView } from "@/components/crm/KanbanView";
 import { AgendaView } from "@/components/crm/AgendaView";
+import { SettingsView, type CustomReportSection } from "@/components/crm/SettingsView";
+
+type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings";
 
 export default function Index() {
   const [leads, setLeads] = useState<Lead[]>(SEED_LEADS);
-  const [activeView, setActiveView] = useState<"pipeline" | "kanban" | "reports" | "agenda">("pipeline");
+  const [activeView, setActiveView] = useState<ViewType>("pipeline");
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [assignedFilter, setAssignedFilter] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [visibleViews, setVisibleViews] = useState<Record<string, boolean>>({
+    pipeline: true, kanban: true, reports: true, agenda: true,
+  });
+  const [customReportSections, setCustomReportSections] = useState<CustomReportSection[]>([]);
 
   const statusCounts = useMemo(() => {
     return leads.reduce<Record<PipelineStatus, number>>((acc, l) => {
@@ -58,11 +66,56 @@ export default function Index() {
     setSelectedLead(updated);
   };
 
+  const handleCreateLeadFromOpportunity = (parentLead: Lead, opportunity: Opportunity) => {
+    const newLead: Lead = {
+      id: Date.now().toString() + "_opp",
+      fecha: new Date().toLocaleDateString("es-CO", { day: "numeric", month: "numeric" }),
+      placa: opportunity.typeFields?.placa || opportunity.placa || "",
+      propietario: parentLead.propietario,
+      insurance: opportunity.aseguradora || parentLead.insurance,
+      email: parentLead.email,
+      phone: parentLead.phone,
+      reference: `Opp: ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} - ${opportunity.description}`,
+      state: "agendar",
+      followUp: "1",
+      remark: `Oportunidad ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} vinculada a ${parentLead.placa || parentLead.propietario}`,
+      lugar: parentLead.lugar,
+      tipoSeguro: opportunity.type === "vehiculo" ? parentLead.tipoSeguro : opportunity.type,
+      monto: opportunity.monto || 0,
+      assignedTo: parentLead.assignedTo,
+      parentLeadId: parentLead.id,
+      opportunityType: opportunity.type as OpportunityType,
+      // Copy client fields
+      tipoIdentificacion: parentLead.tipoIdentificacion,
+      numeroIdentificacion: parentLead.numeroIdentificacion,
+      nombres: parentLead.nombres,
+      apellidos: parentLead.apellidos,
+      sexo: parentLead.sexo,
+      fechaNacimiento: parentLead.fechaNacimiento,
+      ciudad: parentLead.ciudad,
+      departamento: parentLead.departamento,
+      colorVehiculo: parentLead.colorVehiculo,
+      activities: [{
+        id: Date.now().toString(),
+        type: "note",
+        text: `Lead creado desde oportunidad de ${OPPORTUNITY_TYPE_LABELS[opportunity.type]}: ${opportunity.description}`,
+        author: "Sistema",
+        createdAt: new Date().toLocaleString("es-CO"),
+      }],
+    };
+    setLeads((prev) => [...prev, newLead]);
+  };
+
+  const handleToggleView = (view: string) => {
+    setVisibleViews((prev) => ({ ...prev, [view]: prev[view] === false ? true : false }));
+  };
+
   const viewTitles: Record<string, string> = {
     pipeline: "Pipeline de Ventas",
     kanban: "Pipeline de Ventas",
     reports: "Reportes",
     agenda: "Agenda",
+    settings: "Configuración",
   };
 
   const formatMonto = (m: number) =>
@@ -74,17 +127,25 @@ export default function Index() {
     <div className="flex h-screen overflow-hidden bg-background">
       <CrmSidebar
         activeView={activeView}
-        onViewChange={(v) => { setActiveView(v as any); setSelectedLead(null); }}
+        onViewChange={(v) => { setActiveView(v as ViewType); setSelectedLead(null); }}
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
         statusCounts={statusCounts}
         totalLeads={leads.length}
         scheduledCount={scheduledCount}
+        visibleViews={visibleViews}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <CrmHeader
           title={viewTitles[activeView]}
-          subtitle={activeView !== "reports" && activeView !== "agenda" ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}` : activeView === "agenda" ? `${scheduledCount} actividades programadas` : undefined}
+          subtitle={
+            activeView === "settings" ? undefined :
+            activeView !== "reports" && activeView !== "agenda"
+              ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}`
+              : activeView === "agenda"
+              ? `${scheduledCount} actividades programadas`
+              : undefined
+          }
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
@@ -104,6 +165,7 @@ export default function Index() {
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
                 onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
               />
             </>
           )}
@@ -114,6 +176,7 @@ export default function Index() {
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
                 onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
               />
             </>
           )}
@@ -124,10 +187,21 @@ export default function Index() {
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
                 onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
               />
             </>
           )}
-          {activeView === "reports" && <ReportsView leads={filteredLeads} />}
+          {activeView === "reports" && (
+            <ReportsView leads={filteredLeads} customSections={customReportSections} />
+          )}
+          {activeView === "settings" && (
+            <SettingsView
+              visibleViews={visibleViews}
+              onToggleView={handleToggleView}
+              customReportSections={customReportSections}
+              onUpdateReportSections={setCustomReportSections}
+            />
+          )}
         </div>
       </div>
     </div>
