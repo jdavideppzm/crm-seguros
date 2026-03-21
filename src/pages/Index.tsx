@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import type { Lead, PipelineStatus, Opportunity, OpportunityType } from "@/types/crm";
+import type { Lead, PipelineStatus, Opportunity, OpportunityType, Activity, CrmConfig } from "@/types/crm";
 import { SEED_LEADS } from "@/data/seedData";
-import { OPPORTUNITY_TYPE_LABELS } from "@/types/crm";
+import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, ALL_STATUSES, getStatusLabel } from "@/types/crm";
 import { CrmSidebar } from "@/components/crm/CrmSidebar";
 import { CrmHeader } from "@/components/crm/CrmHeader";
 import { LeadTable } from "@/components/crm/LeadTable";
@@ -9,7 +9,8 @@ import { DetailPanel } from "@/components/crm/DetailPanel";
 import { ReportsView } from "@/components/crm/ReportsView";
 import { KanbanView } from "@/components/crm/KanbanView";
 import { AgendaView } from "@/components/crm/AgendaView";
-import { SettingsView, type CustomReportSection } from "@/components/crm/SettingsView";
+import { SettingsView } from "@/components/crm/SettingsView";
+import { CreateLeadModal } from "@/components/crm/CreateLeadModal";
 
 type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings";
 
@@ -21,10 +22,8 @@ export default function Index() {
   const [locationFilter, setLocationFilter] = useState("");
   const [assignedFilter, setAssignedFilter] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [visibleViews, setVisibleViews] = useState<Record<string, boolean>>({
-    pipeline: true, kanban: true, reports: true, agenda: true,
-  });
-  const [customReportSections, setCustomReportSections] = useState<CustomReportSection[]>([]);
+  const [config, setConfig] = useState<CrmConfig>(DEFAULT_CRM_CONFIG);
+  const [showCreateLead, setShowCreateLead] = useState(false);
 
   const statusCounts = useMemo(() => {
     return leads.reduce<Record<PipelineStatus, number>>((acc, l) => {
@@ -37,7 +36,7 @@ export default function Index() {
     let count = 0;
     leads.forEach((l) => {
       (l.activities || []).forEach((a) => {
-        if (a.scheduledAt) count++;
+        if (a.scheduledAt && !a.completed) count++;
       });
     });
     return count;
@@ -50,12 +49,7 @@ export default function Index() {
       if (assignedFilter && l.assignedTo !== assignedFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        return (
-          l.propietario.toLowerCase().includes(q) ||
-          l.placa.toLowerCase().includes(q) ||
-          l.insurance.toLowerCase().includes(q) ||
-          l.reference.toLowerCase().includes(q)
-        );
+        return l.propietario.toLowerCase().includes(q) || l.placa.toLowerCase().includes(q) || l.insurance.toLowerCase().includes(q) || l.reference.toLowerCase().includes(q);
       }
       return true;
     });
@@ -73,54 +67,61 @@ export default function Index() {
       placa: opportunity.typeFields?.placa || opportunity.placa || "",
       propietario: parentLead.propietario,
       insurance: opportunity.aseguradora || parentLead.insurance,
-      email: parentLead.email,
-      phone: parentLead.phone,
+      email: parentLead.email, phone: parentLead.phone,
       reference: `Opp: ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} - ${opportunity.description}`,
-      state: "agendar",
-      followUp: "1",
+      state: "nuevo", followUp: "1",
       remark: `Oportunidad ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} vinculada a ${parentLead.placa || parentLead.propietario}`,
-      lugar: parentLead.lugar,
-      tipoSeguro: opportunity.type === "vehiculo" ? parentLead.tipoSeguro : opportunity.type,
-      monto: opportunity.monto || 0,
-      assignedTo: parentLead.assignedTo,
-      parentLeadId: parentLead.id,
-      opportunityType: opportunity.type as OpportunityType,
-      // Copy client fields
-      tipoIdentificacion: parentLead.tipoIdentificacion,
-      numeroIdentificacion: parentLead.numeroIdentificacion,
-      nombres: parentLead.nombres,
-      apellidos: parentLead.apellidos,
-      sexo: parentLead.sexo,
-      fechaNacimiento: parentLead.fechaNacimiento,
-      ciudad: parentLead.ciudad,
-      departamento: parentLead.departamento,
+      lugar: parentLead.lugar, tipoSeguro: opportunity.type === "vehiculo" ? parentLead.tipoSeguro : opportunity.type,
+      monto: opportunity.monto || 0, assignedTo: parentLead.assignedTo,
+      parentLeadId: parentLead.id, opportunityType: opportunity.type as OpportunityType,
+      tipoIdentificacion: parentLead.tipoIdentificacion, numeroIdentificacion: parentLead.numeroIdentificacion,
+      nombres: parentLead.nombres, apellidos: parentLead.apellidos, sexo: parentLead.sexo,
+      fechaNacimiento: parentLead.fechaNacimiento, ciudad: parentLead.ciudad, departamento: parentLead.departamento,
       colorVehiculo: parentLead.colorVehiculo,
-      activities: [{
-        id: Date.now().toString(),
-        type: "note",
-        text: `Lead creado desde oportunidad de ${OPPORTUNITY_TYPE_LABELS[opportunity.type]}: ${opportunity.description}`,
-        author: "Sistema",
-        createdAt: new Date().toLocaleString("es-CO"),
-      }],
+      activities: [{ id: Date.now().toString(), type: "note", text: `Lead creado desde oportunidad de ${OPPORTUNITY_TYPE_LABELS[opportunity.type]}`, author: "Sistema", createdAt: new Date().toLocaleString("es-CO") }],
     };
     setLeads((prev) => [...prev, newLead]);
   };
 
-  const handleToggleView = (view: string) => {
-    setVisibleViews((prev) => ({ ...prev, [view]: prev[view] === false ? true : false }));
+  const handleMarkActivityDone = (leadId: string, activityId: string, note: string) => {
+    setLeads(prev => prev.map(l => {
+      if (l.id !== leadId) return l;
+      const targetAct = (l.activities || []).find(a => a.id === activityId);
+      const activities = (l.activities || []).map(a => a.id === activityId ? { ...a, completed: true } : a);
+      const completionActivity: Activity = {
+        id: Date.now().toString(), type: "note",
+        text: `✅ Actividad completada: "${targetAct?.text || ""}"${note ? ` — ${note}` : ""}`,
+        author: "Usuario", createdAt: new Date().toLocaleString("es-CO"),
+      };
+      return { ...l, activities: [completionActivity, ...activities] };
+    }));
   };
 
-  const viewTitles: Record<string, string> = {
-    pipeline: "Pipeline de Ventas",
-    kanban: "Pipeline de Ventas",
-    reports: "Reportes",
-    agenda: "Agenda",
-    settings: "Configuración",
+  const handleRescheduleActivity = (leadId: string, activityId: string, newDate: string, comment: string) => {
+    setLeads(prev => prev.map(l => {
+      if (l.id !== leadId) return l;
+      const oldAct = (l.activities || []).find(a => a.id === activityId);
+      const activities = (l.activities || []).map(a => a.id === activityId ? { ...a, scheduledAt: newDate } : a);
+      const rescheduleActivity: Activity = {
+        id: Date.now().toString(), type: "note",
+        text: `🔄 Reprogramada: "${oldAct?.text || ""}" de ${oldAct?.scheduledAt || "?"} a ${newDate}${comment ? ` — ${comment}` : ""}`,
+        author: "Usuario", createdAt: new Date().toLocaleString("es-CO"),
+      };
+      return { ...l, activities: [rescheduleActivity, ...activities] };
+    }));
   };
 
-  const formatMonto = (m: number) =>
-    new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
+  const handleRedistributeLeads = (leadIds: string[], user: string) => {
+    setLeads(prev => prev.map(l => leadIds.includes(l.id) ? { ...l, assignedTo: user } : l));
+  };
 
+  const handleCreateLead = (lead: Lead) => {
+    setLeads(prev => [...prev, lead]);
+  };
+
+  const viewTitles: Record<string, string> = { pipeline: "Pipeline de Ventas", kanban: "Pipeline de Ventas", reports: "Reportes", agenda: "Agenda", settings: "Configuración" };
+
+  const formatMonto = (m: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
   const totalMonto = filteredLeads.reduce((s, l) => s + l.monto, 0);
 
   return (
@@ -128,82 +129,53 @@ export default function Index() {
       <CrmSidebar
         activeView={activeView}
         onViewChange={(v) => { setActiveView(v as ViewType); setSelectedLead(null); }}
-        statusFilter={statusFilter}
-        onStatusFilter={setStatusFilter}
-        statusCounts={statusCounts}
-        totalLeads={leads.length}
-        scheduledCount={scheduledCount}
-        visibleViews={visibleViews}
+        statusFilter={statusFilter} onStatusFilter={setStatusFilter}
+        statusCounts={statusCounts} totalLeads={leads.length}
+        scheduledCount={scheduledCount} visibleViews={config.visibleViews}
+        statusLabels={config.statusLabels} onCreateLead={() => setShowCreateLead(true)}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <CrmHeader
           title={viewTitles[activeView]}
-          subtitle={
-            activeView === "settings" ? undefined :
-            activeView !== "reports" && activeView !== "agenda"
-              ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}`
-              : activeView === "agenda"
-              ? `${scheduledCount} actividades programadas`
-              : undefined
-          }
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          subtitle={activeView === "settings" ? undefined : activeView !== "reports" && activeView !== "agenda" ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}` : activeView === "agenda" ? `${scheduledCount} actividades programadas` : undefined}
+          searchQuery={searchQuery} onSearchChange={setSearchQuery}
         />
         <div className="flex-1 flex overflow-hidden">
           {activeView === "pipeline" && (
             <>
-              <LeadTable
-                leads={filteredLeads}
-                onSelectLead={setSelectedLead}
-                selectedLeadId={selectedLead?.id || null}
-                locationFilter={locationFilter}
-                onLocationFilterChange={setLocationFilter}
-                assignedFilter={assignedFilter}
-                onAssignedFilterChange={setAssignedFilter}
-              />
-              <DetailPanel
-                lead={selectedLead}
-                onClose={() => setSelectedLead(null)}
-                onUpdateLead={handleUpdateLead}
-                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
-              />
+              <LeadTable leads={filteredLeads} onSelectLead={setSelectedLead} selectedLeadId={selectedLead?.id || null}
+                locationFilter={locationFilter} onLocationFilterChange={setLocationFilter}
+                assignedFilter={assignedFilter} onAssignedFilterChange={setAssignedFilter}
+                statusLabels={config.statusLabels} onRedistributeLeads={handleRedistributeLeads} />
+              <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
           )}
           {activeView === "kanban" && (
             <>
-              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} />
-              <DetailPanel
-                lead={selectedLead}
-                onClose={() => setSelectedLead(null)}
-                onUpdateLead={handleUpdateLead}
-                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
-              />
+              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} />
+              <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
           )}
           {activeView === "agenda" && (
             <>
-              <AgendaView leads={leads} onSelectLead={setSelectedLead} />
-              <DetailPanel
-                lead={selectedLead}
-                onClose={() => setSelectedLead(null)}
-                onUpdateLead={handleUpdateLead}
-                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity}
-              />
+              <AgendaView leads={leads} onSelectLead={setSelectedLead}
+                onMarkDone={handleMarkActivityDone} onReschedule={handleRescheduleActivity} />
+              <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
+                onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
           )}
           {activeView === "reports" && (
-            <ReportsView leads={filteredLeads} customSections={customReportSections} />
+            <ReportsView leads={filteredLeads} customSections={config.customReportSections}
+              paymentStatuses={config.paymentStatuses} statusLabels={config.statusLabels} />
           )}
           {activeView === "settings" && (
-            <SettingsView
-              visibleViews={visibleViews}
-              onToggleView={handleToggleView}
-              customReportSections={customReportSections}
-              onUpdateReportSections={setCustomReportSections}
-            />
+            <SettingsView config={config} onUpdateConfig={setConfig} />
           )}
         </div>
       </div>
+      <CreateLeadModal open={showCreateLead} onClose={() => setShowCreateLead(false)} onCreateLead={handleCreateLead} config={config} />
     </div>
   );
 }
