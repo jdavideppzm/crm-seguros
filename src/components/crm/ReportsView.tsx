@@ -1,14 +1,17 @@
 import type { Lead, PipelineStatus } from "@/types/crm";
-import { STATUS_CONFIG } from "@/types/crm";
+import { STATUS_CONFIG, getStatusLabel } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
-import type { CustomReportSection } from "./SettingsView";
+import type { CustomReportSection } from "@/types/crm";
+import type { PaymentStatusConfig } from "@/types/crm";
 
 interface ReportsViewProps {
   leads: Lead[];
   customSections?: CustomReportSection[];
+  paymentStatuses?: PaymentStatusConfig[];
+  statusLabels?: Record<string, string>;
 }
 
-export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
+export function ReportsView({ leads, customSections = [], paymentStatuses = [], statusLabels = {} }: ReportsViewProps) {
   const formatMonto = (m: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
 
@@ -27,11 +30,12 @@ export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
 
   const getGroupByFn = (groupBy: string): (l: Lead) => string => {
     switch (groupBy) {
-      case "state": return (l) => l.state;
+      case "state": return (l) => getStatusLabel(l.state, statusLabels);
       case "assignedTo": return (l) => l.assignedTo || "Sin asignar";
       case "lugar": return (l) => l.lugar;
       case "tipoSeguro": return (l) => l.tipoSeguro;
       case "insurance": return (l) => l.insurance;
+      case "paymentStatus": return (l) => l.paymentStatus || "Sin estado";
       default: return (l) => l.state;
     }
   };
@@ -40,21 +44,27 @@ export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <SummaryCard label="Total Leads" value={leads.length.toString()} />
         <SummaryCard label="Cartera Total" value={formatMonto(totalMonto)} />
         <SummaryCard label="Ticket Promedio" value={formatMonto(leads.length ? totalMonto / leads.length : 0)} />
+        <SummaryCard label="Tasa Cierre" value={`${leads.length ? Math.round((leads.filter(l => l.state === "lograr" || l.state === "bienvenida").length / leads.length) * 100) : 0}%`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ReportCard title="Por Estado">
-          {aggregate((l) => l.state).map(([status, data]) => (
+          {aggregate((l) => getStatusLabel(l.state, statusLabels)).map(([status, data]) => (
             <div key={status} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2">
-                <StatusBadge status={status as PipelineStatus} />
-                <span className="text-xs text-muted-foreground">{data.count}</span>
-              </div>
+              <div className="flex items-center gap-2"><span className="text-sm text-foreground">{status}</span><span className="text-xs text-muted-foreground">{data.count}</span></div>
+              <span className="font-mono text-sm font-medium text-foreground">{formatMonto(data.total)}</span>
+            </div>
+          ))}
+        </ReportCard>
+
+        <ReportCard title="Por Aseguradora">
+          {aggregate((l) => l.insurance).map(([name, data]) => (
+            <div key={name} className="flex items-center justify-between py-2">
+              <span className="text-sm text-foreground">{name} <span className="text-xs text-muted-foreground">({data.count})</span></span>
               <span className="font-mono text-sm font-medium text-foreground">{formatMonto(data.total)}</span>
             </div>
           ))}
@@ -64,16 +74,31 @@ export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
           {aggregate((l) => l.assignedTo || "Sin asignar").map(([name, data]) => (
             <div key={name} className="flex items-center justify-between py-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary">
-                  {name.charAt(0)}
-                </div>
-                <span className="text-sm text-foreground">{name}</span>
-                <span className="text-xs text-muted-foreground">{data.count}</span>
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary">{name.charAt(0)}</div>
+                <span className="text-sm text-foreground">{name}</span><span className="text-xs text-muted-foreground">{data.count}</span>
               </div>
               <span className="font-mono text-sm font-medium text-foreground">{formatMonto(data.total)}</span>
             </div>
           ))}
         </ReportCard>
+
+        {/* Payment Status Report */}
+        {paymentStatuses.length > 0 && (
+          <ReportCard title="Por Estado de Pago">
+            {aggregate((l) => l.paymentStatus || "Sin estado").map(([status, data]) => {
+              const ps = paymentStatuses.find(p => p.label === status);
+              return (
+                <div key={status} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    {ps && <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ps.color }} />}
+                    <span className="text-sm text-foreground">{status} <span className="text-xs text-muted-foreground">({data.count})</span></span>
+                  </div>
+                  <span className="font-mono text-sm font-medium text-foreground">{formatMonto(data.total)}</span>
+                </div>
+              );
+            })}
+          </ReportCard>
+        )}
 
         <ReportCard title="Por Ciudad">
           {aggregate((l) => l.lugar).map(([city, data]) => (
@@ -93,7 +118,6 @@ export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
           ))}
         </ReportCard>
 
-        {/* Custom Sections */}
         {visibleCustom.map((section) => {
           const data = aggregate(getGroupByFn(section.groupBy));
           return (
@@ -109,9 +133,7 @@ export function ReportsView({ leads, customSections = [] }: ReportsViewProps) {
                     const pct = totalMonto > 0 ? Math.round((d.total / totalMonto) * 100) : 0;
                     return (
                       <div key={label} className="flex items-center gap-2 py-1">
-                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
+                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} /></div>
                         <span className="text-xs text-foreground flex-1">{label}</span>
                         <span className="text-[11px] font-mono text-muted-foreground">{pct}%</span>
                       </div>

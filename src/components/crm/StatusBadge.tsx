@@ -1,7 +1,8 @@
 import type { PipelineStatus } from "@/types/crm";
-import { STATUS_CONFIG } from "@/types/crm";
+import { STATUS_CONFIG, getStatusLabel } from "@/types/crm";
 
 const statusStyles: Record<PipelineStatus, string> = {
+  nuevo: "bg-status-nuevo/10 text-status-nuevo border-status-nuevo/20",
   emitir: "bg-status-emitir/10 text-status-emitir border-status-emitir/20",
   agendar: "bg-status-agendar/10 text-status-agendar border-status-agendar/20",
   devolucion: "bg-status-devolucion/10 text-status-devolucion border-status-devolucion/20",
@@ -13,6 +14,7 @@ const statusStyles: Record<PipelineStatus, string> = {
 };
 
 const dotColor: Record<PipelineStatus, string> = {
+  nuevo: "bg-status-nuevo",
   emitir: "bg-status-emitir",
   agendar: "bg-status-agendar",
   devolucion: "bg-status-devolucion",
@@ -23,11 +25,16 @@ const dotColor: Record<PipelineStatus, string> = {
   bienvenida: "bg-status-bienvenida",
 };
 
-export function StatusBadge({ status }: { status: PipelineStatus }) {
+interface StatusBadgeProps {
+  status: PipelineStatus;
+  labelOverrides?: Record<string, string>;
+}
+
+export function StatusBadge({ status, labelOverrides = {} }: StatusBadgeProps) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusStyles[status]}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor[status]}`} />
-      {STATUS_CONFIG[status].label}
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusStyles[status] || statusStyles.nuevo}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor[status] || dotColor.nuevo}`} />
+      {getStatusLabel(status, labelOverrides)}
     </span>
   );
 }

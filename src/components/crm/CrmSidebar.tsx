@@ -1,6 +1,6 @@
-import { BarChart3, CalendarDays, LayoutGrid, Table2, Settings } from "lucide-react";
+import { BarChart3, CalendarDays, LayoutGrid, Table2, Settings, Plus } from "lucide-react";
 import type { PipelineStatus } from "@/types/crm";
-import { STATUS_CONFIG } from "@/types/crm";
+import { STATUS_CONFIG, ALL_STATUSES, getStatusLabel } from "@/types/crm";
 
 type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings";
 
@@ -13,13 +13,12 @@ interface CrmSidebarProps {
   totalLeads: number;
   scheduledCount?: number;
   visibleViews?: Record<string, boolean>;
+  statusLabels?: Record<string, string>;
+  onCreateLead?: () => void;
 }
 
-const statusOrder: PipelineStatus[] = [
-  "agendar", "seguimiento", "recolectar", "emitir", "lograr", "bienvenida", "bloqueo", "devolucion",
-];
-
 const statusDotColor: Record<PipelineStatus, string> = {
+  nuevo: "bg-status-nuevo",
   emitir: "bg-status-emitir",
   agendar: "bg-status-agendar",
   devolucion: "bg-status-devolucion",
@@ -30,10 +29,9 @@ const statusDotColor: Record<PipelineStatus, string> = {
   bienvenida: "bg-status-bienvenida",
 };
 
-export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0, visibleViews = {} }: CrmSidebarProps) {
+export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0, visibleViews = {}, statusLabels = {}, onCreateLead }: CrmSidebarProps) {
   return (
     <aside className="w-56 shrink-0 bg-sidebar-dark-bg h-screen flex flex-col">
-      {/* Brand */}
       <div className="px-5 py-5">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-sidebar-dark-active flex items-center justify-center">
@@ -46,7 +44,19 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Create Lead Button */}
+      {onCreateLead && (
+        <div className="px-3 mb-2">
+          <button
+            onClick={onCreateLead}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-sidebar-dark-active text-sidebar-dark-bright text-xs font-medium hover:bg-primary/80 transition-colors"
+          >
+            <Plus size={14} />
+            Nuevo Lead
+          </button>
+        </div>
+      )}
+
       <nav className="px-3 space-y-0.5">
         {visibleViews["pipeline"] !== false && (
           <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />
@@ -65,7 +75,6 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
         </div>
       </nav>
 
-      {/* Status Filters */}
       <div className="px-3 mt-6">
         <p className="px-3 mb-2 text-[11px] font-semibold text-sidebar-dark-fg uppercase tracking-widest">Filtros</p>
         <button
@@ -77,7 +86,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
           <span>Todos</span>
           <span className="font-mono text-[11px] opacity-60">{totalLeads}</span>
         </button>
-        {statusOrder.map((status) => (
+        {ALL_STATUSES.map((status) => (
           <button
             key={status}
             onClick={() => onStatusFilter(status)}
@@ -87,14 +96,13 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
           >
             <span className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${statusDotColor[status]}`} />
-              {STATUS_CONFIG[status].label}
+              {getStatusLabel(status, statusLabels)}
             </span>
             <span className="font-mono text-[11px] opacity-60">{statusCounts[status] || 0}</span>
           </button>
         ))}
       </div>
 
-      {/* Footer */}
       <div className="mt-auto px-5 py-4 border-t border-sidebar-dark-border">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-sidebar-dark-active flex items-center justify-center text-[11px] font-semibold text-sidebar-dark-bright">
