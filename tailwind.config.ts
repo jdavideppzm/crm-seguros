@@ -51,6 +51,7 @@ export default {
           lograr: "hsl(var(--status-lograr))",
           bloqueo: "hsl(var(--status-bloqueo))",
           bienvenida: "hsl(var(--status-bienvenida))",
+          nuevo: "hsl(var(--status-nuevo))",
         },
       },
       borderRadius: {
