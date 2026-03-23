@@ -52,8 +52,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   const [editFieldValue, setEditFieldValue] = useState("");
   const [addingPhone, setAddingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState("");
+  const [newPhoneLabel, setNewPhoneLabel] = useState("");
   const [addingEmail, setAddingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [newEmailLabel, setNewEmailLabel] = useState("");
   const [selectedPhone, setSelectedPhone] = useState("");
   const [selectedEmail, setSelectedEmail] = useState("");
 
