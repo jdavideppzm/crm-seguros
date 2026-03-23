@@ -217,7 +217,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   }} />
                   {allEmails.length > 1 && (
                     <select value={selectedEmail} onChange={e => setSelectedEmail(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-xs">
-                      {allEmails.map((em, i) => <option key={i} value={em}>{em}</option>)}
+                      {allEmails.map((em, i) => <option key={i} value={em.value}>{em.label ? `${em.label}: ${em.value}` : em.value}</option>)}
                     </select>
                   )}
                 </div>
