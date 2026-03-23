@@ -118,16 +118,18 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
 
   const handleAddPhone = () => {
     if (!lead || !newPhone.trim()) return;
-    const phones = [...(lead.phones || []), newPhone.trim()];
+    const entry: ContactEntry = { value: newPhone.trim(), label: newPhoneLabel.trim() || undefined };
+    const phones = [...(lead.phones || []), entry];
     onUpdateLead({ ...lead, phones });
-    setNewPhone(""); setAddingPhone(false);
+    setNewPhone(""); setNewPhoneLabel(""); setAddingPhone(false);
   };
 
   const handleAddEmail = () => {
     if (!lead || !newEmail.trim()) return;
-    const emails = [...(lead.emails || []), newEmail.trim()];
+    const entry: ContactEntry = { value: newEmail.trim(), label: newEmailLabel.trim() || undefined };
+    const emails = [...(lead.emails || []), entry];
     onUpdateLead({ ...lead, emails });
-    setNewEmail(""); setAddingEmail(false);
+    setNewEmail(""); setNewEmailLabel(""); setAddingEmail(false);
   };
 
   const formatMonto = (m: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
