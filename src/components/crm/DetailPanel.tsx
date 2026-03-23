@@ -182,7 +182,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <h2 className="text-base font-semibold text-foreground leading-tight">{lead.propietario}</h2>
                     )}
                     <div className="flex items-center gap-2 mt-0.5">
-                      <StatusBadge status={lead.state} labelOverrides={config.statusLabels} />
+                      <StatusBadge status={lead.state} labelOverrides={config.statusLabels} pipelineStages={config.pipelineStages} />
                       {/* Insurance + Semáforo */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"><Shield size={10} />{lead.insurance}</span>
