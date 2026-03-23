@@ -142,9 +142,16 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   });
 
   const isNit = lead?.tipoIdentificacion === "NIT";
-  const allPhones = lead ? [lead.phone, ...(lead.phones || [])].filter(Boolean) : [];
-  const allEmails = lead ? [lead.email, ...(lead.emails || [])].filter(Boolean) : [];
+  const allPhones: ContactEntry[] = lead ? [
+    { value: lead.phone, label: "Principal" },
+    ...(lead.phones || []),
+  ].filter(e => e.value) : [];
+  const allEmails: ContactEntry[] = lead ? [
+    { value: lead.email, label: "Principal" },
+    ...(lead.emails || []),
+  ].filter(e => e.value) : [];
   const cuotaCalc = lead?.tipoPago === "financiado" && lead.valorPrima && lead.numeroCuotas ? lead.valorPrima / lead.numeroCuotas : undefined;
+  const stageKeys = config.pipelineStages.map(s => s.key);
 
   return (
     <AnimatePresence>
