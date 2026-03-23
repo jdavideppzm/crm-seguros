@@ -324,11 +324,15 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <button onClick={() => setAddingEmail(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
                     </div>
                     {allEmails.map((em, i) => (
-                      <p key={i} className="text-xs text-foreground ml-4 truncate">{em}</p>
+                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
+                        <p className="text-xs text-foreground truncate">{em.value}</p>
+                        {em.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{em.label}</span>}
+                      </div>
                     ))}
                     {addingEmail && (
                       <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Nuevo email" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Email" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newEmailLabel} onChange={e => setNewEmailLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
                         <button onClick={handleAddEmail} className="text-primary"><Check size={11} /></button>
                         <button onClick={() => setAddingEmail(false)} className="text-muted-foreground"><X size={11} /></button>
                       </div>
