@@ -229,7 +229,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                     }} />
                     {allPhones.length > 1 && (
                       <select value={selectedPhone} onChange={e => setSelectedPhone(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-xs">
-                        {allPhones.map((ph, i) => <option key={i} value={ph}>{ph}</option>)}
+                        {allPhones.map((ph, i) => <option key={i} value={ph.value}>{ph.label ? `${ph.label}: ${ph.value}` : ph.value}</option>)}
                       </select>
                     )}
                   </div>
