@@ -154,7 +154,7 @@ export default function Index() {
           )}
           {activeView === "kanban" && (
             <>
-              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} />
+              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} />
               <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
                 onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
