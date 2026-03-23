@@ -351,7 +351,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado</label>
                     <select value={editState || ""} onChange={(e) => setEditState(e.target.value as PipelineStatus)} className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring">
-                      {ALL_STATUSES.map((s) => <option key={s} value={s}>{getStatusLabel(s, config.statusLabels)}</option>)}
+                      {config.pipelineStages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                     </select>
                   </div>
                   <div>
