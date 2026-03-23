@@ -1,40 +1,29 @@
-import type { PipelineStatus } from "@/types/crm";
-import { STATUS_CONFIG, getStatusLabel } from "@/types/crm";
-
-const statusStyles: Record<PipelineStatus, string> = {
-  nuevo: "bg-status-nuevo/10 text-status-nuevo border-status-nuevo/20",
-  emitir: "bg-status-emitir/10 text-status-emitir border-status-emitir/20",
-  agendar: "bg-status-agendar/10 text-status-agendar border-status-agendar/20",
-  devolucion: "bg-status-devolucion/10 text-status-devolucion border-status-devolucion/20",
-  seguimiento: "bg-status-seguimiento/10 text-status-seguimiento border-status-seguimiento/20",
-  recolectar: "bg-status-recolectar/10 text-status-recolectar border-status-recolectar/20",
-  lograr: "bg-status-lograr/10 text-status-lograr border-status-lograr/20",
-  bloqueo: "bg-status-bloqueo/10 text-status-bloqueo border-status-bloqueo/20",
-  bienvenida: "bg-status-bienvenida/10 text-status-bienvenida border-status-bienvenida/20",
-};
-
-const dotColor: Record<PipelineStatus, string> = {
-  nuevo: "bg-status-nuevo",
-  emitir: "bg-status-emitir",
-  agendar: "bg-status-agendar",
-  devolucion: "bg-status-devolucion",
-  seguimiento: "bg-status-seguimiento",
-  recolectar: "bg-status-recolectar",
-  lograr: "bg-status-lograr",
-  bloqueo: "bg-status-bloqueo",
-  bienvenida: "bg-status-bienvenida",
-};
+import type { PipelineStatus, PipelineStageConfig } from "@/types/crm";
+import { STATUS_CONFIG, getStatusLabel, DEFAULT_PIPELINE_STAGES } from "@/types/crm";
 
 interface StatusBadgeProps {
   status: PipelineStatus;
   labelOverrides?: Record<string, string>;
+  pipelineStages?: PipelineStageConfig[];
 }
 
-export function StatusBadge({ status, labelOverrides = {} }: StatusBadgeProps) {
+export function StatusBadge({ status, labelOverrides = {}, pipelineStages }: StatusBadgeProps) {
+  const stages = pipelineStages || DEFAULT_PIPELINE_STAGES;
+  const stage = stages.find(s => s.key === status);
+  const color = stage?.color || "#6B7280";
+  const label = labelOverrides[status] || stage?.label || STATUS_CONFIG[status]?.label || status;
+
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusStyles[status] || statusStyles.nuevo}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor[status] || dotColor.nuevo}`} />
-      {getStatusLabel(status, labelOverrides)}
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border"
+      style={{
+        backgroundColor: color + "18",
+        color: color,
+        borderColor: color + "30",
+      }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+      {label}
     </span>
   );
 }

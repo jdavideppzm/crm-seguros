@@ -133,6 +133,7 @@ export default function Index() {
         statusCounts={statusCounts} totalLeads={leads.length}
         scheduledCount={scheduledCount} visibleViews={config.visibleViews}
         statusLabels={config.statusLabels} onCreateLead={() => setShowCreateLead(true)}
+        pipelineStages={config.pipelineStages}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <CrmHeader
@@ -153,7 +154,7 @@ export default function Index() {
           )}
           {activeView === "kanban" && (
             <>
-              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} />
+              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} />
               <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
                 onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>

@@ -7,7 +7,7 @@ import {
   Pencil, Check, Palette, Plus, Briefcase,
 } from "lucide-react";
 import { useState } from "react";
-import type { Lead, PipelineStatus, Note, Activity, CrmConfig } from "@/types/crm";
+import type { Lead, PipelineStatus, Note, Activity, CrmConfig, ContactEntry } from "@/types/crm";
 import { STATUS_CONFIG, USERS, ALL_STATUSES, getStatusLabel, YEAR_OPTIONS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
@@ -52,8 +52,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   const [editFieldValue, setEditFieldValue] = useState("");
   const [addingPhone, setAddingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState("");
+  const [newPhoneLabel, setNewPhoneLabel] = useState("");
   const [addingEmail, setAddingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [newEmailLabel, setNewEmailLabel] = useState("");
   const [selectedPhone, setSelectedPhone] = useState("");
   const [selectedEmail, setSelectedEmail] = useState("");
 
@@ -116,16 +118,18 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
 
   const handleAddPhone = () => {
     if (!lead || !newPhone.trim()) return;
-    const phones = [...(lead.phones || []), newPhone.trim()];
+    const entry: ContactEntry = { value: newPhone.trim(), label: newPhoneLabel.trim() || undefined };
+    const phones = [...(lead.phones || []), entry];
     onUpdateLead({ ...lead, phones });
-    setNewPhone(""); setAddingPhone(false);
+    setNewPhone(""); setNewPhoneLabel(""); setAddingPhone(false);
   };
 
   const handleAddEmail = () => {
     if (!lead || !newEmail.trim()) return;
-    const emails = [...(lead.emails || []), newEmail.trim()];
+    const entry: ContactEntry = { value: newEmail.trim(), label: newEmailLabel.trim() || undefined };
+    const emails = [...(lead.emails || []), entry];
     onUpdateLead({ ...lead, emails });
-    setNewEmail(""); setAddingEmail(false);
+    setNewEmail(""); setNewEmailLabel(""); setAddingEmail(false);
   };
 
   const formatMonto = (m: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
@@ -138,9 +142,16 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   });
 
   const isNit = lead?.tipoIdentificacion === "NIT";
-  const allPhones = lead ? [lead.phone, ...(lead.phones || [])].filter(Boolean) : [];
-  const allEmails = lead ? [lead.email, ...(lead.emails || [])].filter(Boolean) : [];
+  const allPhones: ContactEntry[] = lead ? [
+    { value: lead.phone, label: "Principal" },
+    ...(lead.phones || []),
+  ].filter(e => e.value) : [];
+  const allEmails: ContactEntry[] = lead ? [
+    { value: lead.email, label: "Principal" },
+    ...(lead.emails || []),
+  ].filter(e => e.value) : [];
   const cuotaCalc = lead?.tipoPago === "financiado" && lead.valorPrima && lead.numeroCuotas ? lead.valorPrima / lead.numeroCuotas : undefined;
+  const stageKeys = config.pipelineStages.map(s => s.key);
 
   return (
     <AnimatePresence>
@@ -171,7 +182,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <h2 className="text-base font-semibold text-foreground leading-tight">{lead.propietario}</h2>
                     )}
                     <div className="flex items-center gap-2 mt-0.5">
-                      <StatusBadge status={lead.state} labelOverrides={config.statusLabels} />
+                      <StatusBadge status={lead.state} labelOverrides={config.statusLabels} pipelineStages={config.pipelineStages} />
                       {/* Insurance + Semáforo */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"><Shield size={10} />{lead.insurance}</span>
@@ -206,7 +217,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   }} />
                   {allEmails.length > 1 && (
                     <select value={selectedEmail} onChange={e => setSelectedEmail(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-xs">
-                      {allEmails.map((em, i) => <option key={i} value={em}>{em}</option>)}
+                      {allEmails.map((em, i) => <option key={i} value={em.value}>{em.label ? `${em.label}: ${em.value}` : em.value}</option>)}
                     </select>
                   )}
                 </div>
@@ -218,7 +229,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                     }} />
                     {allPhones.length > 1 && (
                       <select value={selectedPhone} onChange={e => setSelectedPhone(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-xs">
-                        {allPhones.map((ph, i) => <option key={i} value={ph}>{ph}</option>)}
+                        {allPhones.map((ph, i) => <option key={i} value={ph.value}>{ph.label ? `${ph.label}: ${ph.value}` : ph.value}</option>)}
                       </select>
                     )}
                   </div>
@@ -291,11 +302,15 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <button onClick={() => setAddingPhone(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
                     </div>
                     {allPhones.map((ph, i) => (
-                      <p key={i} className="text-xs text-foreground ml-4">{ph}</p>
+                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
+                        <p className="text-xs text-foreground">{ph.value}</p>
+                        {ph.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{ph.label}</span>}
+                      </div>
                     ))}
                     {addingPhone && (
                       <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Nuevo teléfono" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Teléfono" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newPhoneLabel} onChange={e => setNewPhoneLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
                         <button onClick={handleAddPhone} className="text-primary"><Check size={11} /></button>
                         <button onClick={() => setAddingPhone(false)} className="text-muted-foreground"><X size={11} /></button>
                       </div>
@@ -309,11 +324,15 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <button onClick={() => setAddingEmail(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
                     </div>
                     {allEmails.map((em, i) => (
-                      <p key={i} className="text-xs text-foreground ml-4 truncate">{em}</p>
+                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
+                        <p className="text-xs text-foreground truncate">{em.value}</p>
+                        {em.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{em.label}</span>}
+                      </div>
                     ))}
                     {addingEmail && (
                       <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Nuevo email" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Email" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newEmailLabel} onChange={e => setNewEmailLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
                         <button onClick={handleAddEmail} className="text-primary"><Check size={11} /></button>
                         <button onClick={() => setAddingEmail(false)} className="text-muted-foreground"><X size={11} /></button>
                       </div>
@@ -332,7 +351,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado</label>
                     <select value={editState || ""} onChange={(e) => setEditState(e.target.value as PipelineStatus)} className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring">
-                      {ALL_STATUSES.map((s) => <option key={s} value={s}>{getStatusLabel(s, config.statusLabels)}</option>)}
+                      {config.pipelineStages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                     </select>
                   </div>
                   <div>

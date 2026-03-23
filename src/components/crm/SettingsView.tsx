@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
   Settings, Table2, LayoutGrid, BarChart3, CalendarDays,
-  Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2,
+  Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2, Check, ToggleLeft,
 } from "lucide-react";
-import type { CrmConfig, PaymentStatusConfig, IdTypeConfig, CustomReportSection } from "@/types/crm";
-import { STATUS_CONFIG, ALL_STATUSES, getStatusLabel } from "@/types/crm";
+import type { CrmConfig, PaymentStatusConfig, IdTypeConfig, CustomReportSection, PipelineStageConfig, LeadFormFieldConfig } from "@/types/crm";
+import { getStatusLabel } from "@/types/crm";
 
 interface SettingsViewProps {
   config: CrmConfig;
@@ -43,8 +43,10 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
   const [newIdType, setNewIdType] = useState({ code: "", label: "" });
   const [addingService, setAddingService] = useState(false);
   const [newService, setNewService] = useState("");
-  const [editingLabel, setEditingLabel] = useState<string | null>(null);
-  const [editLabelValue, setEditLabelValue] = useState("");
+  const [addingStage, setAddingStage] = useState(false);
+  const [newStage, setNewStage] = useState({ label: "", color: "#6B7280" });
+  const [editingStage, setEditingStage] = useState<string | null>(null);
+  const [editStageLabel, setEditStageLabel] = useState("");
 
   const updateConfig = (partial: Partial<CrmConfig>) => onUpdateConfig({ ...config, ...partial });
 
@@ -54,6 +56,39 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
     const section: CustomReportSection = { id: Date.now().toString(), title: newSection.title.trim(), type: (newSection.type || "bar") as any, groupBy: newSection.groupBy || "state", visible: true };
     updateConfig({ customReportSections: [...config.customReportSections, section] });
     setNewSection({ type: "bar", groupBy: "state" }); setAddingReport(false);
+  };
+
+  const handleAddStage = () => {
+    if (!newStage.label.trim()) return;
+    const key = newStage.label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    const stage: PipelineStageConfig = { id: Date.now().toString(), key, label: newStage.label.trim(), color: newStage.color };
+    updateConfig({ pipelineStages: [...config.pipelineStages, stage] });
+    setNewStage({ label: "", color: "#6B7280" }); setAddingStage(false);
+  };
+
+  const handleDeleteStage = (stageId: string) => {
+    if (config.pipelineStages.length <= 2) return;
+    updateConfig({ pipelineStages: config.pipelineStages.filter(s => s.id !== stageId) });
+  };
+
+  const handleSaveStageLabel = (stageId: string) => {
+    if (!editStageLabel.trim()) return;
+    updateConfig({
+      pipelineStages: config.pipelineStages.map(s => s.id === stageId ? { ...s, label: editStageLabel.trim() } : s),
+    });
+    setEditingStage(null);
+  };
+
+  const handleToggleLeadField = (key: string) => {
+    updateConfig({
+      leadFormFields: config.leadFormFields.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f),
+    });
+  };
+
+  const handleToggleLeadFieldRequired = (key: string) => {
+    updateConfig({
+      leadFormFields: config.leadFormFields.map(f => f.key === key ? { ...f, required: !f.required } : f),
+    });
   };
 
   return (
@@ -79,31 +114,47 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
         </div>
       </ConfigCard>
 
-      {/* Pipeline Status Labels */}
-      <ConfigCard title="Estados del pipeline" description="Personaliza los nombres de cada estado.">
+      {/* Pipeline Stages */}
+      <ConfigCard title="Estados del pipeline" description="Agrega, renombra o elimina estados. Mínimo 2." onAdd={() => setAddingStage(true)}>
         <div className="space-y-2">
-          {ALL_STATUSES.map((status) => {
-            const isEditing = editingLabel === status;
-            const currentLabel = getStatusLabel(status, config.statusLabels);
+          {config.pipelineStages.map((stage) => {
+            const isEditing = editingStage === stage.id;
             return (
-              <div key={status} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors">
-                {isEditing ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <input value={editLabelValue} onChange={(e) => setEditLabelValue(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { updateConfig({ statusLabels: { ...config.statusLabels, [status]: editLabelValue } }); setEditingLabel(null); } }}
-                      className="flex-1 text-sm py-1 px-2 bg-muted/50 border border-border rounded-md" autoFocus />
-                    <button onClick={() => { updateConfig({ statusLabels: { ...config.statusLabels, [status]: editLabelValue } }); setEditingLabel(null); }} className="text-primary"><Pencil size={12} /></button>
-                    <button onClick={() => setEditingLabel(null)} className="text-muted-foreground"><X size={12} /></button>
+              <div key={stage.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3.5 h-3.5 rounded-full border border-border shrink-0" style={{ backgroundColor: stage.color }} />
+                  {isEditing ? (
+                    <div className="flex items-center gap-1.5">
+                      <input value={editStageLabel} onChange={e => setEditStageLabel(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") handleSaveStageLabel(stage.id); if (e.key === "Escape") setEditingStage(null); }}
+                        className="text-sm py-0.5 px-2 bg-background border border-border rounded-md w-40" autoFocus />
+                      <button onClick={() => handleSaveStageLabel(stage.id)} className="text-primary"><Check size={12} /></button>
+                      <button onClick={() => setEditingStage(null)} className="text-muted-foreground"><X size={12} /></button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-foreground">{stage.label}</span>
+                  )}
+                </div>
+                {!isEditing && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => { setEditingStage(stage.id); setEditStageLabel(stage.label); }} className="p-1 rounded hover:bg-muted text-muted-foreground"><Pencil size={12} /></button>
+                    <button onClick={() => handleDeleteStage(stage.id)} disabled={config.pipelineStages.length <= 2}
+                      className="p-1 rounded hover:bg-destructive/10 disabled:opacity-30"><Trash2 size={12} className="text-destructive" /></button>
                   </div>
-                ) : (
-                  <>
-                    <span className="text-sm text-foreground">{currentLabel}</span>
-                    <button onClick={() => { setEditingLabel(status); setEditLabelValue(currentLabel); }} className="p-1 rounded hover:bg-muted text-muted-foreground"><Pencil size={12} /></button>
-                  </>
                 )}
               </div>
             );
           })}
+          {addingStage && (
+            <div className="flex items-center gap-2 py-2 px-3 rounded-lg border border-primary/30 bg-primary/5">
+              <input type="color" value={newStage.color} onChange={e => setNewStage({ ...newStage, color: e.target.value })} className="w-8 h-8 rounded border-0 cursor-pointer" />
+              <input value={newStage.label} onChange={e => setNewStage({ ...newStage, label: e.target.value })} placeholder="Nombre del estado"
+                className="flex-1 text-xs py-1.5 px-2 bg-background border border-border rounded-md" autoFocus
+                onKeyDown={e => { if (e.key === "Enter") handleAddStage(); }} />
+              <button onClick={handleAddStage} disabled={!newStage.label.trim()} className="px-2 py-1 rounded bg-primary text-primary-foreground text-xs disabled:opacity-40">Agregar</button>
+              <button onClick={() => setAddingStage(false)} className="text-muted-foreground"><X size={12} /></button>
+            </div>
+          )}
         </div>
       </ConfigCard>
 
@@ -166,6 +217,29 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
               <button onClick={() => setAddingService(false)} className="text-muted-foreground"><X size={12} /></button>
             </div>
           )}
+        </div>
+      </ConfigCard>
+
+      {/* Lead Form Fields */}
+      <ConfigCard title="Formulario nuevo lead" description="Elige qué campos aparecen al crear un lead y cuáles son obligatorios.">
+        <div className="space-y-1">
+          {config.leadFormFields.map((field) => (
+            <div key={field.key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm text-foreground">{field.label}</span>
+                {field.required && field.enabled && <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded">REQ</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                {field.enabled && (
+                  <button onClick={() => handleToggleLeadFieldRequired(field.key)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${field.required ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    Obligatorio
+                  </button>
+                )}
+                <ToggleSwitch checked={field.enabled} onChange={() => handleToggleLeadField(field.key)} />
+              </div>
+            </div>
+          ))}
         </div>
       </ConfigCard>
 

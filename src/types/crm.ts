@@ -1,13 +1,4 @@
-export type PipelineStatus =
-  | "nuevo"
-  | "emitir"
-  | "agendar"
-  | "devolucion"
-  | "seguimiento"
-  | "recolectar"
-  | "lograr"
-  | "bloqueo"
-  | "bienvenida";
+export type PipelineStatus = string;
 
 export interface Lead {
   id: string;
@@ -53,8 +44,8 @@ export interface Lead {
   numeroCuotas?: number;
   valorCuota?: number;
   paymentStatus?: string;
-  phones?: string[];
-  emails?: string[];
+  phones?: ContactEntry[];
+  emails?: ContactEntry[];
   // NIT fields
   empresaNombre?: string;
   representanteLegal?: string;
@@ -64,6 +55,11 @@ export interface Lead {
   // Parent lead link
   parentLeadId?: string;
   opportunityType?: OpportunityType;
+}
+
+export interface ContactEntry {
+  value: string;
+  label?: string;
 }
 
 export interface Note {
@@ -105,7 +101,27 @@ export interface Activity {
   };
 }
 
-export const STATUS_CONFIG: Record<PipelineStatus, { label: string; cssVar: string }> = {
+export interface PipelineStageConfig {
+  id: string;
+  key: string;
+  label: string;
+  color: string;
+}
+
+export const DEFAULT_PIPELINE_STAGES: PipelineStageConfig[] = [
+  { id: "s1", key: "nuevo", label: "Nuevo", color: "#3B82F6" },
+  { id: "s2", key: "agendar", label: "Agendar", color: "#8B5CF6" },
+  { id: "s3", key: "seguimiento", label: "Seguimiento", color: "#F59E0B" },
+  { id: "s4", key: "recolectar", label: "Recolectar", color: "#06B6D4" },
+  { id: "s5", key: "emitir", label: "Emitir", color: "#10B981" },
+  { id: "s6", key: "lograr", label: "Lograr", color: "#22C55E" },
+  { id: "s7", key: "bienvenida", label: "Bienvenida", color: "#EC4899" },
+  { id: "s8", key: "bloqueo", label: "Bloqueo", color: "#EF4444" },
+  { id: "s9", key: "devolucion", label: "Devolución", color: "#F97316" },
+];
+
+// Legacy compat
+export const STATUS_CONFIG: Record<string, { label: string; cssVar: string }> = {
   nuevo: { label: "Nuevo", cssVar: "--status-nuevo" },
   emitir: { label: "Emitir", cssVar: "--status-emitir" },
   agendar: { label: "Agendar", cssVar: "--status-agendar" },
@@ -290,6 +306,34 @@ export interface CustomReportSection {
   visible: boolean;
 }
 
+export interface LeadFormFieldConfig {
+  key: string;
+  label: string;
+  enabled: boolean;
+  required: boolean;
+}
+
+export const DEFAULT_LEAD_FORM_FIELDS: LeadFormFieldConfig[] = [
+  { key: "propietario", label: "Nombre completo", enabled: true, required: true },
+  { key: "tipoIdentificacion", label: "Tipo identificación", enabled: true, required: false },
+  { key: "numeroIdentificacion", label: "Nº identificación", enabled: true, required: false },
+  { key: "phone", label: "Teléfono", enabled: true, required: false },
+  { key: "email", label: "Email", enabled: true, required: false },
+  { key: "placa", label: "Placa", enabled: true, required: false },
+  { key: "lugar", label: "Ciudad", enabled: true, required: false },
+  { key: "insurance", label: "Aseguradora", enabled: true, required: false },
+  { key: "marca", label: "Marca", enabled: true, required: false },
+  { key: "modelo", label: "Modelo", enabled: true, required: false },
+  { key: "tipoSeguro", label: "Tipo seguro", enabled: true, required: false },
+  { key: "monto", label: "Valor asegurado", enabled: true, required: false },
+  { key: "valorPrima", label: "Valor prima", enabled: true, required: false },
+  { key: "sexo", label: "Sexo", enabled: false, required: false },
+  { key: "fechaNacimiento", label: "Fecha nacimiento", enabled: false, required: false },
+  { key: "colorVehiculo", label: "Color vehículo", enabled: false, required: false },
+  { key: "tipoServicio", label: "Tipo servicio", enabled: false, required: false },
+  { key: "assignedTo", label: "Asignado a", enabled: true, required: false },
+];
+
 export interface CrmConfig {
   paymentStatuses: PaymentStatusConfig[];
   idTypes: IdTypeConfig[];
@@ -297,7 +341,8 @@ export interface CrmConfig {
   statusLabels: Record<string, string>;
   customReportSections: CustomReportSection[];
   visibleViews: Record<string, boolean>;
-  leadFormFields: string[];
+  leadFormFields: LeadFormFieldConfig[];
+  pipelineStages: PipelineStageConfig[];
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
@@ -307,11 +352,21 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   statusLabels: {},
   customReportSections: [],
   visibleViews: { pipeline: true, kanban: true, reports: true, agenda: true },
-  leadFormFields: ["propietario", "phone", "email", "placa", "insurance", "lugar", "tipoSeguro", "monto"],
+  leadFormFields: DEFAULT_LEAD_FORM_FIELDS,
+  pipelineStages: DEFAULT_PIPELINE_STAGES,
 };
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
 
-export function getStatusLabel(status: PipelineStatus, overrides: Record<string, string> = {}): string {
-  return overrides[status] || STATUS_CONFIG[status]?.label || status;
+export function getStatusLabel(status: PipelineStatus, overrides: Record<string, string> = {}, stages?: PipelineStageConfig[]): string {
+  if (overrides[status]) return overrides[status];
+  if (stages) {
+    const stage = stages.find(s => s.key === status);
+    if (stage) return stage.label;
+  }
+  return STATUS_CONFIG[status]?.label || status;
+}
+
+export function getStageKeys(config: CrmConfig): string[] {
+  return config.pipelineStages.map(s => s.key);
 }
