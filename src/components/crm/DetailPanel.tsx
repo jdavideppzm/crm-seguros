@@ -302,11 +302,15 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                       <button onClick={() => setAddingPhone(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
                     </div>
                     {allPhones.map((ph, i) => (
-                      <p key={i} className="text-xs text-foreground ml-4">{ph}</p>
+                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
+                        <p className="text-xs text-foreground">{ph.value}</p>
+                        {ph.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{ph.label}</span>}
+                      </div>
                     ))}
                     {addingPhone && (
                       <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Nuevo teléfono" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Teléfono" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
+                        <input value={newPhoneLabel} onChange={e => setNewPhoneLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
                         <button onClick={handleAddPhone} className="text-primary"><Check size={11} /></button>
                         <button onClick={() => setAddingPhone(false)} className="text-muted-foreground"><X size={11} /></button>
                       </div>
