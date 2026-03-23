@@ -7,7 +7,7 @@ import {
   Pencil, Check, Palette, Plus, Briefcase,
 } from "lucide-react";
 import { useState } from "react";
-import type { Lead, PipelineStatus, Note, Activity, CrmConfig } from "@/types/crm";
+import type { Lead, PipelineStatus, Note, Activity, CrmConfig, ContactEntry } from "@/types/crm";
 import { STATUS_CONFIG, USERS, ALL_STATUSES, getStatusLabel, YEAR_OPTIONS } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
