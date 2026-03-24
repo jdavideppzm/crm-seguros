@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { Lead, PipelineStatus, Opportunity, OpportunityType, Activity, CrmConfig } from "@/types/crm";
 import { SEED_LEADS } from "@/data/seedData";
-import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, ALL_STATUSES, getStatusLabel } from "@/types/crm";
+import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, getStatusLabel, getInsuranceCommission } from "@/types/crm";
 import { CrmSidebar } from "@/components/crm/CrmSidebar";
 import { CrmHeader } from "@/components/crm/CrmHeader";
 import { LeadTable } from "@/components/crm/LeadTable";
@@ -55,6 +55,38 @@ export default function Index() {
     });
   }, [leads, statusFilter, searchQuery, locationFilter, assignedFilter]);
 
+  // === Automation Engine ===
+  const runAutomations = useCallback((lead: Lead, oldState: string, newState: string) => {
+    const newActivities: Activity[] = [];
+    
+    config.automationRules.filter(r => r.enabled).forEach(rule => {
+      if (rule.trigger.type === "status_change") {
+        if (rule.trigger.toStatus && rule.trigger.toStatus === newState) {
+          if (rule.action.type === "create_activity") {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dateStr = `${tomorrow.getDate()}/${tomorrow.getMonth() + 1}/${tomorrow.getFullYear()}`;
+            newActivities.push({
+              id: Date.now().toString() + "_auto" + Math.random().toString(36).slice(2, 4),
+              type: "automation",
+              text: `⚡ ${rule.action.activityText || rule.name}`,
+              author: "Sistema",
+              createdAt: new Date().toLocaleString("es-CO"),
+              scheduledAt: dateStr,
+              leadId: lead.id,
+              leadName: lead.propietario,
+            });
+          }
+          if (rule.action.type === "change_status" && rule.action.targetStatus) {
+            lead = { ...lead, state: rule.action.targetStatus };
+          }
+        }
+      }
+    });
+
+    return { lead, newActivities };
+  }, [config.automationRules]);
+
   const handleUpdateLead = (updated: Lead) => {
     setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
     setSelectedLead(updated);
@@ -69,7 +101,7 @@ export default function Index() {
       insurance: opportunity.aseguradora || parentLead.insurance,
       email: parentLead.email, phone: parentLead.phone,
       reference: `Opp: ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} - ${opportunity.description}`,
-      state: "nuevo", followUp: "1",
+      state: config.pipelineStages[0]?.key || "nuevo", followUp: "1",
       remark: `Oportunidad ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} vinculada a ${parentLead.placa || parentLead.propietario}`,
       lugar: parentLead.lugar, tipoSeguro: opportunity.type === "vehiculo" ? parentLead.tipoSeguro : opportunity.type,
       monto: opportunity.monto || 0, assignedTo: parentLead.assignedTo,
@@ -147,14 +179,15 @@ export default function Index() {
               <LeadTable leads={filteredLeads} onSelectLead={setSelectedLead} selectedLeadId={selectedLead?.id || null}
                 locationFilter={locationFilter} onLocationFilterChange={setLocationFilter}
                 assignedFilter={assignedFilter} onAssignedFilterChange={setAssignedFilter}
-                statusLabels={config.statusLabels} onRedistributeLeads={handleRedistributeLeads} />
+                statusLabels={config.statusLabels} onRedistributeLeads={handleRedistributeLeads}
+                config={config} />
               <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
                 onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
           )}
           {activeView === "kanban" && (
             <>
-              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} />
+              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} config={config} />
               <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
                 onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
             </>
@@ -168,7 +201,8 @@ export default function Index() {
             </>
           )}
           {activeView === "reports" && (
-            <ReportsView leads={filteredLeads} customSections={config.customReportSections}
+            <ReportsView leads={filteredLeads} config={config}
+              customSections={config.customReportSections}
               paymentStatuses={config.paymentStatuses} statusLabels={config.statusLabels} />
           )}
           {activeView === "settings" && (

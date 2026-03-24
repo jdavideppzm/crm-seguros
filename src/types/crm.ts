@@ -55,6 +55,11 @@ export interface Lead {
   // Parent lead link
   parentLeadId?: string;
   opportunityType?: OpportunityType;
+  // New structured fields
+  origenLead?: string;
+  tipPoliza?: string;
+  aseguradoraId?: string;
+  comisionCalculada?: number;
 }
 
 export interface ContactEntry {
@@ -69,7 +74,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type ActivityType = "note" | "call" | "email" | "status_change" | "field_edit" | "whatsapp" | "doc_selected" | "doc_summary";
+export type ActivityType = "note" | "call" | "email" | "status_change" | "field_edit" | "whatsapp" | "doc_selected" | "doc_summary" | "automation";
 
 export interface ActivityComment {
   id: string;
@@ -101,40 +106,41 @@ export interface Activity {
   };
 }
 
+// === Pipeline ===
+
 export interface PipelineStageConfig {
   id: string;
   key: string;
   label: string;
   color: string;
+  isFinal?: boolean;
+  finalType?: "ganado" | "perdido";
+  order: number;
 }
 
 export const DEFAULT_PIPELINE_STAGES: PipelineStageConfig[] = [
-  { id: "s1", key: "nuevo", label: "Nuevo", color: "#3B82F6" },
-  { id: "s2", key: "agendar", label: "Agendar", color: "#8B5CF6" },
-  { id: "s3", key: "seguimiento", label: "Seguimiento", color: "#F59E0B" },
-  { id: "s4", key: "recolectar", label: "Recolectar", color: "#06B6D4" },
-  { id: "s5", key: "emitir", label: "Emitir", color: "#10B981" },
-  { id: "s6", key: "lograr", label: "Lograr", color: "#22C55E" },
-  { id: "s7", key: "bienvenida", label: "Bienvenida", color: "#EC4899" },
-  { id: "s8", key: "bloqueo", label: "Bloqueo", color: "#EF4444" },
-  { id: "s9", key: "devolucion", label: "Devolución", color: "#F97316" },
+  { id: "s1", key: "nuevo", label: "Nuevo", color: "#3B82F6", order: 0 },
+  { id: "s2", key: "contactado", label: "Contactado", color: "#8B5CF6", order: 1 },
+  { id: "s3", key: "cotizacion", label: "Cotización", color: "#F59E0B", order: 2 },
+  { id: "s4", key: "seguimiento", label: "Seguimiento", color: "#06B6D4", order: 3 },
+  { id: "s5", key: "emitido", label: "Emitido", color: "#10B981", order: 4 },
+  { id: "s6", key: "ganado", label: "Ganado", color: "#22C55E", isFinal: true, finalType: "ganado", order: 5 },
+  { id: "s7", key: "perdido", label: "Perdido", color: "#EF4444", isFinal: true, finalType: "perdido", order: 6 },
 ];
 
 // Legacy compat
 export const STATUS_CONFIG: Record<string, { label: string; cssVar: string }> = {
   nuevo: { label: "Nuevo", cssVar: "--status-nuevo" },
-  emitir: { label: "Emitir", cssVar: "--status-emitir" },
-  agendar: { label: "Agendar", cssVar: "--status-agendar" },
-  devolucion: { label: "Devolución", cssVar: "--status-devolucion" },
-  seguimiento: { label: "Seguimiento", cssVar: "--status-seguimiento" },
-  recolectar: { label: "Recolectar", cssVar: "--status-recolectar" },
-  lograr: { label: "Lograr", cssVar: "--status-lograr" },
-  bloqueo: { label: "Bloqueo", cssVar: "--status-bloqueo" },
-  bienvenida: { label: "Bienvenida", cssVar: "--status-bienvenida" },
+  contactado: { label: "Contactado", cssVar: "--status-agendar" },
+  cotizacion: { label: "Cotización", cssVar: "--status-seguimiento" },
+  seguimiento: { label: "Seguimiento", cssVar: "--status-recolectar" },
+  emitido: { label: "Emitido", cssVar: "--status-emitir" },
+  ganado: { label: "Ganado", cssVar: "--status-lograr" },
+  perdido: { label: "Perdido", cssVar: "--status-bloqueo" },
 };
 
 export const ALL_STATUSES: PipelineStatus[] = [
-  "nuevo", "agendar", "seguimiento", "recolectar", "emitir", "lograr", "bienvenida", "bloqueo", "devolucion",
+  "nuevo", "contactado", "cotizacion", "seguimiento", "emitido", "ganado", "perdido",
 ];
 
 export const USERS = ["Carlos M.", "Ana R.", "Pedro L.", "María G."];
@@ -265,6 +271,120 @@ export interface Opportunity {
   linkedLeadId?: string;
 }
 
+// === Aseguradoras ===
+
+export interface InsuranceCompany {
+  id: string;
+  name: string;
+  commission: number;
+  contact?: string;
+  notes?: string;
+}
+
+export const DEFAULT_INSURANCE_COMPANIES: InsuranceCompany[] = [
+  { id: "ins1", name: "AXA COLPATRIA", commission: 15, contact: "contacto@axa.com" },
+  { id: "ins2", name: "MAPFRE", commission: 12, contact: "" },
+  { id: "ins3", name: "SEGUROS BOLIVAR", commission: 14, contact: "" },
+  { id: "ins4", name: "ALLIANZ", commission: 13, contact: "" },
+  { id: "ins5", name: "EQUIDAD", commission: 10, contact: "" },
+  { id: "ins6", name: "SURA", commission: 16, contact: "" },
+];
+
+// === Tipos de Póliza ===
+
+export interface PolicyType {
+  id: string;
+  name: string;
+}
+
+export const DEFAULT_POLICY_TYPES: PolicyType[] = [
+  { id: "pt1", name: "Todo riesgo" },
+  { id: "pt2", name: "Parcial" },
+  { id: "pt3", name: "SOAT" },
+  { id: "pt4", name: "Responsabilidad civil" },
+];
+
+// === Origen de Leads ===
+
+export interface LeadOrigin {
+  id: string;
+  name: string;
+}
+
+export const DEFAULT_LEAD_ORIGINS: LeadOrigin[] = [
+  { id: "lo1", name: "Referido" },
+  { id: "lo2", name: "Redes sociales" },
+  { id: "lo3", name: "Página web" },
+  { id: "lo4", name: "Llamada entrante" },
+  { id: "lo5", name: "Base de datos" },
+];
+
+// === Automatizaciones ===
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: AutomationTrigger;
+  action: AutomationAction;
+}
+
+export interface AutomationTrigger {
+  type: "status_change" | "days_inactive" | "lead_created";
+  fromStatus?: string;
+  toStatus?: string;
+  daysInactive?: number;
+}
+
+export interface AutomationAction {
+  type: "create_activity" | "change_status" | "send_alert";
+  activityText?: string;
+  activityType?: string;
+  targetStatus?: string;
+  alertMessage?: string;
+}
+
+export const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
+  {
+    id: "auto1",
+    name: "Contactado → Crear seguimiento en agenda",
+    enabled: true,
+    trigger: { type: "status_change", toStatus: "contactado" },
+    action: { type: "create_activity", activityText: "Seguimiento automático tras contacto", activityType: "call" },
+  },
+  {
+    id: "auto2",
+    name: "Emitido → Marcar como ganado",
+    enabled: false,
+    trigger: { type: "status_change", toStatus: "emitido" },
+    action: { type: "change_status", targetStatus: "ganado" },
+  },
+  {
+    id: "auto3",
+    name: "Alerta por inactividad (5 días)",
+    enabled: true,
+    trigger: { type: "days_inactive", daysInactive: 5 },
+    action: { type: "send_alert", alertMessage: "Lead sin actividad por más de 5 días" },
+  },
+];
+
+// === Usuarios y Roles ===
+
+export interface CrmUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "vendedor";
+  active: boolean;
+}
+
+export const DEFAULT_CRM_USERS: CrmUser[] = [
+  { id: "u1", name: "Carlos M.", email: "carlos@crm.com", role: "admin", active: true },
+  { id: "u2", name: "Ana R.", email: "ana@crm.com", role: "vendedor", active: true },
+  { id: "u3", name: "Pedro L.", email: "pedro@crm.com", role: "vendedor", active: true },
+  { id: "u4", name: "María G.", email: "maria@crm.com", role: "vendedor", active: true },
+];
+
 // === CRM Config Types ===
 
 export interface PaymentStatusConfig {
@@ -322,6 +442,8 @@ export const DEFAULT_LEAD_FORM_FIELDS: LeadFormFieldConfig[] = [
   { key: "placa", label: "Placa", enabled: true, required: false },
   { key: "lugar", label: "Ciudad", enabled: true, required: false },
   { key: "insurance", label: "Aseguradora", enabled: true, required: false },
+  { key: "origenLead", label: "Origen del lead", enabled: true, required: false },
+  { key: "tipPoliza", label: "Tipo de póliza", enabled: true, required: false },
   { key: "marca", label: "Marca", enabled: true, required: false },
   { key: "modelo", label: "Modelo", enabled: true, required: false },
   { key: "tipoSeguro", label: "Tipo seguro", enabled: true, required: false },
@@ -343,6 +465,11 @@ export interface CrmConfig {
   visibleViews: Record<string, boolean>;
   leadFormFields: LeadFormFieldConfig[];
   pipelineStages: PipelineStageConfig[];
+  insuranceCompanies: InsuranceCompany[];
+  policyTypes: PolicyType[];
+  leadOrigins: LeadOrigin[];
+  automationRules: AutomationRule[];
+  users: CrmUser[];
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
@@ -354,6 +481,11 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   visibleViews: { pipeline: true, kanban: true, reports: true, agenda: true },
   leadFormFields: DEFAULT_LEAD_FORM_FIELDS,
   pipelineStages: DEFAULT_PIPELINE_STAGES,
+  insuranceCompanies: DEFAULT_INSURANCE_COMPANIES,
+  policyTypes: DEFAULT_POLICY_TYPES,
+  leadOrigins: DEFAULT_LEAD_ORIGINS,
+  automationRules: DEFAULT_AUTOMATION_RULES,
+  users: DEFAULT_CRM_USERS,
 };
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
@@ -369,4 +501,17 @@ export function getStatusLabel(status: PipelineStatus, overrides: Record<string,
 
 export function getStageKeys(config: CrmConfig): string[] {
   return config.pipelineStages.map(s => s.key);
+}
+
+export function getProcessStages(config: CrmConfig): PipelineStageConfig[] {
+  return config.pipelineStages.filter(s => !s.isFinal).sort((a, b) => a.order - b.order);
+}
+
+export function getFinalStages(config: CrmConfig): PipelineStageConfig[] {
+  return config.pipelineStages.filter(s => s.isFinal).sort((a, b) => a.order - b.order);
+}
+
+export function getInsuranceCommission(config: CrmConfig, insuranceName: string): number {
+  const company = config.insuranceCompanies.find(c => c.name === insuranceName);
+  return company?.commission || 0;
 }
