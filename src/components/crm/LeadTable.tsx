@@ -1,7 +1,6 @@
 import { useState } from "react";
-import type { Lead, PipelineStatus } from "@/types/crm";
+import type { Lead, CrmConfig } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
-import { USERS } from "@/types/crm";
 
 interface LeadTableProps {
   leads: Lead[];
@@ -13,24 +12,21 @@ interface LeadTableProps {
   onAssignedFilterChange: (a: string) => void;
   statusLabels?: Record<string, string>;
   onRedistributeLeads?: (leadIds: string[], user: string) => void;
+  config?: CrmConfig;
 }
 
 export function LeadTable({
-  leads,
-  onSelectLead,
-  selectedLeadId,
-  locationFilter,
-  onLocationFilterChange,
-  assignedFilter,
-  onAssignedFilterChange,
-  statusLabels = {},
-  onRedistributeLeads,
+  leads, onSelectLead, selectedLeadId,
+  locationFilter, onLocationFilterChange,
+  assignedFilter, onAssignedFilterChange,
+  statusLabels = {}, onRedistributeLeads, config,
 }: LeadTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRedistribute, setShowRedistribute] = useState(false);
 
   const locations = [...new Set(leads.map((l) => l.lugar).filter(Boolean))].sort();
   const assigned = [...new Set(leads.map((l) => l.assignedTo).filter(Boolean))].sort();
+  const activeUsers = config?.users.filter(u => u.active) || [];
 
   const formatMonto = (m: number) =>
     new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
@@ -44,11 +40,8 @@ export function LeadTable({
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === leads.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(leads.map(l => l.id)));
-    }
+    if (selectedIds.size === leads.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(leads.map(l => l.id)));
   };
 
   const handleRedistribute = (user: string) => {
@@ -73,17 +66,15 @@ export function LeadTable({
 
         {selectedIds.size > 0 && (
           <div className="relative ml-2">
-            <button
-              onClick={() => setShowRedistribute(!showRedistribute)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-            >
+            <button onClick={() => setShowRedistribute(!showRedistribute)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
               Distribuir ({selectedIds.size})
             </button>
             {showRedistribute && (
               <div className="absolute z-20 top-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[160px]">
-                {USERS.map(user => (
-                  <button key={user} onClick={() => handleRedistribute(user)} className="w-full text-left text-xs px-3 py-2 hover:bg-muted transition-colors text-foreground">
-                    {user}
+                {activeUsers.map(user => (
+                  <button key={user.id} onClick={() => handleRedistribute(user.name)} className="w-full text-left text-xs px-3 py-2 hover:bg-muted transition-colors text-foreground">
+                    {user.name} <span className="text-muted-foreground">({user.role})</span>
                   </button>
                 ))}
               </div>
@@ -113,12 +104,10 @@ export function LeadTable({
           </thead>
           <tbody>
             {leads.map((lead) => (
-              <tr
-                key={lead.id}
+              <tr key={lead.id}
                 className={`border-b border-border/60 cursor-pointer transition-colors duration-100 ${
                   selectedLeadId === lead.id ? "bg-primary/[0.04]" : selectedIds.has(lead.id) ? "bg-accent/50" : "hover:bg-muted/60"
-                }`}
-              >
+                }`}>
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} className="w-3.5 h-3.5 rounded border-border" />
                 </td>
@@ -134,10 +123,10 @@ export function LeadTable({
                   </div>
                 </td>
                 <td className="px-3 py-2.5 text-muted-foreground" onClick={() => onSelectLead(lead)}>{lead.lugar}</td>
-                <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipoSeguro}</td>
+                <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipPoliza || lead.tipoSeguro}</td>
                 <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.insurance}</td>
                 <td className="px-3 py-2.5 text-right font-mono text-foreground font-medium" onClick={() => onSelectLead(lead)}>{formatMonto(lead.monto)}</td>
-                <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}><StatusBadge status={lead.state} labelOverrides={statusLabels} /></td>
+                <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}><StatusBadge status={lead.state} labelOverrides={statusLabels} pipelineStages={config?.pipelineStages} /></td>
                 <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.assignedTo || "—"}</td>
                 <td className="px-3 py-2.5 text-muted-foreground text-xs truncate max-w-[160px]" onClick={() => onSelectLead(lead)}>{lead.remark || "—"}</td>
               </tr>

@@ -4,11 +4,11 @@ import {
   Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
   Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
   CreditCard, Users, UserCircle, Building2, CalendarDays, Bell,
-  Pencil, Check, Palette, Plus, Briefcase,
+  Pencil, Check, Palette, Plus, Briefcase, Tag, TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity, CrmConfig, ContactEntry } from "@/types/crm";
-import { STATUS_CONFIG, USERS, ALL_STATUSES, getStatusLabel, YEAR_OPTIONS } from "@/types/crm";
+import { getStatusLabel, YEAR_OPTIONS, getInsuranceCommission } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
 import { ActivityItem } from "./ActivityItem";
@@ -25,14 +25,15 @@ interface DetailPanelProps {
 }
 
 const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: string; label: string }> = {
-  note: { icon: StickyNote, color: "text-status-seguimiento", label: "Nota" },
-  call: { icon: PhoneCall, color: "text-status-lograr", label: "Llamada" },
-  email: { icon: Mail, color: "text-status-bienvenida", label: "Email" },
-  whatsapp: { icon: MessageSquare, color: "text-status-lograr", label: "WhatsApp" },
-  status_change: { icon: ActivityIcon, color: "text-status-emitir", label: "Cambio de estado" },
-  field_edit: { icon: Pencil, color: "text-status-recolectar", label: "Edición" },
+  note: { icon: StickyNote, color: "text-amber-500", label: "Nota" },
+  call: { icon: PhoneCall, color: "text-green-500", label: "Llamada" },
+  email: { icon: Mail, color: "text-cyan-500", label: "Email" },
+  whatsapp: { icon: MessageSquare, color: "text-green-500", label: "WhatsApp" },
+  status_change: { icon: ActivityIcon, color: "text-blue-500", label: "Cambio de estado" },
+  field_edit: { icon: Pencil, color: "text-violet-500", label: "Edición" },
   doc_selected: { icon: FileText, color: "text-primary", label: "Cotización seleccionada" },
-  doc_summary: { icon: FileText, color: "text-status-bienvenida", label: "Resumen documento" },
+  doc_summary: { icon: FileText, color: "text-cyan-500", label: "Resumen documento" },
+  automation: { icon: ActivityIcon, color: "text-amber-500", label: "Automatización" },
 };
 
 export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config }: DetailPanelProps) {
@@ -86,8 +87,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     if (editState !== lead.state) {
       const statusText = editRemark.trim() && editRemark !== lead.remark ? `Estado cambiado · "${editRemark.trim()}"` : `Estado cambiado`;
       newActivities.unshift(addActivity("status_change", statusText, {
-        fromStatus: getStatusLabel(lead.state, config.statusLabels),
-        toStatus: getStatusLabel(editState, config.statusLabels),
+        fromStatus: getStatusLabel(lead.state, config.statusLabels, config.pipelineStages),
+        toStatus: getStatusLabel(editState, config.statusLabels, config.pipelineStages),
       }));
     }
 
@@ -137,7 +138,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   const filteredActivities = (lead?.activities || []).filter((a) => {
     if (activeTab === "all") return true;
     if (activeTab === "notes") return a.type === "note";
-    if (activeTab === "calls") return a.type === "call" || a.type === "status_change" || a.type === "field_edit" || a.type === "whatsapp" || a.type === "doc_selected" || a.type === "doc_summary";
+    if (activeTab === "calls") return a.type === "call" || a.type === "status_change" || a.type === "field_edit" || a.type === "whatsapp" || a.type === "doc_selected" || a.type === "doc_summary" || a.type === "automation";
     return true;
   });
 
@@ -150,8 +151,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     { value: lead.email, label: "Principal" },
     ...(lead.emails || []),
   ].filter(e => e.value) : [];
-  const cuotaCalc = lead?.tipoPago === "financiado" && lead.valorPrima && lead.numeroCuotas ? lead.valorPrima / lead.numeroCuotas : undefined;
-  const stageKeys = config.pipelineStages.map(s => s.key);
+  const cuotaCalc = lead?.tipoPago === "Financiado" && lead.valorPrima && lead.numeroCuotas ? lead.valorPrima / lead.numeroCuotas : undefined;
+  const activeUsers = config.users.filter(u => u.active);
+  const commission = lead ? getInsuranceCommission(config, lead.insurance) : 0;
+  const calculatedCommission = lead?.valorPrima && commission ? (lead.valorPrima * commission / 100) : 0;
 
   return (
     <AnimatePresence>
@@ -163,7 +166,10 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
           <div className="border-b border-border bg-card sticky top-0 z-10">
             <div className="flex items-center justify-between px-5 py-2.5">
               <button onClick={onClose} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"><X size={14} /><span>Cerrar</span></button>
-              {lead.valorPrima ? <span className="text-xs font-mono font-bold text-primary">Prima: {formatMonto(lead.valorPrima)}</span> : null}
+              <div className="flex items-center gap-3">
+                {lead.valorPrima ? <span className="text-xs font-mono font-bold text-primary">Prima: {formatMonto(lead.valorPrima)}</span> : null}
+                {calculatedCommission > 0 && <span className="text-[10px] font-mono text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Com: {formatMonto(calculatedCommission)} ({commission}%)</span>}
+              </div>
             </div>
 
             <div className="px-5 pb-3">
@@ -183,7 +189,6 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                     )}
                     <div className="flex items-center gap-2 mt-0.5">
                       <StatusBadge status={lead.state} labelOverrides={config.statusLabels} pipelineStages={config.pipelineStages} />
-                      {/* Insurance + Semáforo */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"><Shield size={10} />{lead.insurance}</span>
                         {lead.insurance && config.paymentStatuses.length > 0 && (
@@ -246,16 +251,21 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                 <div className="space-y-2.5">
                   <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad circulación" value={lead.lugar} fieldKey="lugar" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
                   <EditableDetailRow icon={<Car size={12} />} label="Placa" value={lead.placa || "—"} fieldKey="placa" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <EditableDetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance} fieldKey="insurance" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  {/* Tipo de servicio - dropdown */}
+                  {/* Insurance from config */}
+                  <DropdownDetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance || "—"} options={config.insuranceCompanies.map(c => c.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Aseguradora: "${lead.insurance}" → "${v}"`, { field: "insurance", oldValue: lead.insurance, newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, insurance: v, activities: acts }); }} />
+                  {/* Policy type from config */}
+                  <DropdownDetailRow icon={<Tag size={12} />} label="Tipo de póliza" value={lead.tipPoliza || lead.tipoSeguro || "—"} options={config.policyTypes.map(p => p.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo póliza: "${lead.tipPoliza || lead.tipoSeguro || '—'}" → "${v}"`, { field: "tipPoliza", oldValue: lead.tipPoliza || lead.tipoSeguro || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipPoliza: v, tipoSeguro: v, activities: acts }); }} />
+                  {/* Origin from config */}
+                  <DropdownDetailRow icon={<TrendingUp size={12} />} label="Origen" value={lead.origenLead || "—"} options={config.leadOrigins.map(o => o.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Origen: "${lead.origenLead || '—'}" → "${v}"`, { field: "origenLead", oldValue: lead.origenLead || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, origenLead: v, activities: acts }); }} />
                   <DropdownDetailRow icon={<FileText size={12} />} label="Tipo servicio" value={lead.tipoServicio || "—"} options={config.serviceTypes} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo servicio: "${lead.tipoServicio || '—'}" → "${v}"`, { field: "tipoServicio", oldValue: lead.tipoServicio || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoServicio: v, activities: acts }); }} />
                   <EditableDetailRow icon={<Car size={12} />} label="Marca" value={lead.marca || "—"} fieldKey="marca" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  {/* Modelo - year dropdown */}
                   <DropdownDetailRow icon={<Calendar size={12} />} label="Modelo" value={lead.modelo || "—"} options={YEAR_OPTIONS} onChange={(v) => { const acts = [addActivity("field_edit", `Modelo: "${lead.modelo || '—'}" → "${v}"`, { field: "modelo", oldValue: lead.modelo || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, modelo: v, activities: acts }); }} />
                   <EditableDetailRow icon={<Car size={12} />} label="Ref. vehículo" value={lead.referenciaVehiculo || "—"} fieldKey="referenciaVehiculo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
                   <DetailRow icon={<DollarSign size={12} />} label="Valor asegurado" value={formatMonto(lead.monto)} mono />
                   <EditableDetailRow icon={<DollarSign size={12} />} label="Valor prima" value={lead.valorPrima ? formatMonto(lead.valorPrima) : "—"} fieldKey="valorPrima" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v === "—" ? "" : String(lead.valorPrima || "")); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => { if (!lead) return; const val = Number(nv); const acts = [addActivity("field_edit", `Valor prima: "${old}" → "${formatMonto(val)}"`, { field: k, oldValue: old, newValue: formatMonto(val) }), ...(lead.activities || [])]; onUpdateLead({ ...lead, valorPrima: val, activities: acts }); setEditingField(null); }} onCancelEdit={() => setEditingField(null)} />
-                  {/* Tipo de pago */}
+                  {calculatedCommission > 0 && (
+                    <DetailRow icon={<TrendingUp size={12} />} label={`Comisión (${commission}%)`} value={formatMonto(calculatedCommission)} mono />
+                  )}
                   <DropdownDetailRow icon={<CreditCard size={12} />} label="Tipo pago" value={lead.tipoPago || "—"} options={["Contado", "Financiado"]} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo pago: "${lead.tipoPago || '—'}" → "${v}"`, { field: "tipoPago", oldValue: lead.tipoPago || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoPago: v, numeroCuotas: v === "Contado" ? undefined : lead.numeroCuotas, activities: acts }); }} />
                   {lead.tipoPago === "Financiado" && (
                     <>
@@ -271,7 +281,6 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
               {/* CAMPOS CLIENTE */}
               <CollapsibleSection title="CAMPOS CLIENTE" icon={<Users size={13} />} open={clientFieldsOpen} onToggle={() => setClientFieldsOpen(!clientFieldsOpen)}>
                 <div className="space-y-2.5">
-                  {/* Tipo identificación dropdown */}
                   <DropdownDetailRow icon={<CreditCard size={12} />} label="Tipo identificación" value={lead.tipoIdentificacion || "—"} options={config.idTypes.map(t => `${t.code} - ${t.label}`)} onChange={(v) => { const code = v.split(" - ")[0]; const acts = [addActivity("field_edit", `Tipo ID: "${lead.tipoIdentificacion || '—'}" → "${code}"`, { field: "tipoIdentificacion", oldValue: lead.tipoIdentificacion || "—", newValue: code }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoIdentificacion: code, activities: acts }); }} />
                   <EditableDetailRow icon={<Hash size={12} />} label="Nº identificación" value={lead.numeroIdentificacion || "—"} fieldKey="numeroIdentificacion" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
 
@@ -295,7 +304,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.ciudad || "—"} fieldKey="ciudad" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
                   <EditableDetailRow icon={<Building2 size={12} />} label="Departamento" value={lead.departamento || "—"} fieldKey="departamento" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
 
-                  {/* Phone with add more */}
+                  {/* Phones */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone size={10} />Teléfono(s)</span>
@@ -317,7 +326,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                     )}
                   </div>
 
-                  {/* Email with add more */}
+                  {/* Emails */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail size={10} />Email(s)</span>
@@ -351,14 +360,16 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado</label>
                     <select value={editState || ""} onChange={(e) => setEditState(e.target.value as PipelineStatus)} className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring">
-                      {config.pipelineStages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                      {config.pipelineStages.sort((a, b) => a.order - b.order).map((s) => (
+                        <option key={s.key} value={s.key}>{s.label}{s.isFinal ? ` (${s.finalType})` : ""}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Asignado</label>
                     <select value={editAssigned} onChange={(e) => setEditAssigned(e.target.value)} className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring">
                       <option value="">Sin asignar</option>
-                      {USERS.map((u) => <option key={u} value={u}>{u}</option>)}
+                      {activeUsers.map((u) => <option key={u.id} value={u.name}>{u.name} ({u.role})</option>)}
                     </select>
                   </div>
                   <div>

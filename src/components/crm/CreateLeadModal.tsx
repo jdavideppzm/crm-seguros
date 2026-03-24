@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { Lead, PipelineStatus, CrmConfig } from "@/types/crm";
-import { USERS, YEAR_OPTIONS } from "@/types/crm";
+import { YEAR_OPTIONS } from "@/types/crm";
 
 interface CreateLeadModalProps {
   open: boolean;
@@ -18,6 +18,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
   const enabledFields = config.leadFormFields.filter(f => f.enabled);
   const isFieldEnabled = (key: string) => enabledFields.some(f => f.key === key);
   const isNit = form.tipoIdentificacion === "NIT";
+  const activeUsers = config.users.filter(u => u.active);
 
   const handleCreate = () => {
     const requiredFields = config.leadFormFields.filter(f => f.enabled && f.required);
@@ -26,6 +27,10 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
       if (!val || (typeof val === "string" && !val.trim())) return;
     }
     if (!form.propietario?.trim() && !form.empresaNombre?.trim()) return;
+
+    // Calculate commission
+    const company = config.insuranceCompanies.find(c => c.name === form.insurance);
+    const comision = company && form.valorPrima ? (form.valorPrima * company.commission / 100) : undefined;
 
     const newLead: Lead = {
       id: Date.now().toString(),
@@ -59,6 +64,9 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
       empresaNombre: form.empresaNombre,
       representanteLegal: form.representanteLegal,
       cedulaRepresentante: form.cedulaRepresentante,
+      origenLead: form.origenLead,
+      tipPoliza: form.tipPoliza,
+      comisionCalculada: comision,
       activities: [{
         id: Date.now().toString(),
         type: "note",
@@ -103,6 +111,33 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
             </select>
           </FormField>
         );
+      case "insurance":
+        return (
+          <FormField label="Aseguradora">
+            <select value={form.insurance || ""} onChange={e => update("insurance", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
+              <option value="">Seleccionar</option>
+              {config.insuranceCompanies.map(c => <option key={c.id} value={c.name}>{c.name} ({c.commission}%)</option>)}
+            </select>
+          </FormField>
+        );
+      case "origenLead":
+        return (
+          <FormField label="Origen del lead">
+            <select value={form.origenLead || ""} onChange={e => update("origenLead", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
+              <option value="">Seleccionar</option>
+              {config.leadOrigins.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+            </select>
+          </FormField>
+        );
+      case "tipPoliza":
+        return (
+          <FormField label="Tipo de póliza">
+            <select value={form.tipPoliza || ""} onChange={e => update("tipPoliza", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
+              <option value="">Seleccionar</option>
+              {config.policyTypes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          </FormField>
+        );
       case "numeroIdentificacion":
         return <FormField label="Nº Identificación"><input value={form.numeroIdentificacion || ""} onChange={e => update("numeroIdentificacion", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg font-mono" /></FormField>;
       case "phone":
@@ -113,8 +148,6 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
         return <FormField label="Placa"><input value={form.placa || ""} onChange={e => update("placa", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg font-mono uppercase" /></FormField>;
       case "lugar":
         return <FormField label="Ciudad"><input value={form.lugar || ""} onChange={e => update("lugar", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
-      case "insurance":
-        return <FormField label="Aseguradora"><input value={form.insurance || ""} onChange={e => update("insurance", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "marca":
         return <FormField label="Marca"><input value={form.marca || ""} onChange={e => update("marca", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "modelo":
@@ -126,7 +159,14 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
           </FormField>
         );
       case "tipoSeguro":
-        return <FormField label="Tipo seguro"><input value={form.tipoSeguro || ""} onChange={e => update("tipoSeguro", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
+        return (
+          <FormField label="Tipo seguro">
+            <select value={form.tipoSeguro || ""} onChange={e => update("tipoSeguro", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
+              <option value="">Seleccionar</option>
+              {config.policyTypes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          </FormField>
+        );
       case "monto":
         return <FormField label="Valor asegurado"><input type="number" value={form.monto || ""} onChange={e => update("monto", Number(e.target.value))} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg font-mono" /></FormField>;
       case "valorPrima":
@@ -155,7 +195,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
         return (
           <FormField label="Asignado">
             <select value={form.assignedTo || ""} onChange={e => update("assignedTo", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
-              <option value="">Sin asignar</option>{USERS.map(u => <option key={u} value={u}>{u}</option>)}
+              <option value="">Sin asignar</option>{activeUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
             </select>
           </FormField>
         );
@@ -164,7 +204,6 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
     }
   };
 
-  // Group fields into pairs for grid layout
   const gridFields = enabledFields.filter(f => f.key !== "propietario");
   const pairs: string[][] = [];
   for (let i = 0; i < gridFields.length; i += 2) {
@@ -180,7 +219,6 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* ID type + number always first if enabled */}
           {(isFieldEnabled("tipoIdentificacion") || isFieldEnabled("numeroIdentificacion")) && (
             <div className="grid grid-cols-2 gap-3">
               {isFieldEnabled("tipoIdentificacion") && renderField("tipoIdentificacion")}
@@ -188,10 +226,8 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
             </div>
           )}
 
-          {/* Name / NIT fields */}
           {isFieldEnabled("propietario") && renderField("propietario")}
 
-          {/* Remaining fields in pairs */}
           {pairs.filter(p => !["tipoIdentificacion", "numeroIdentificacion"].includes(p[0])).map((pair, i) => (
             <div key={i} className={pair.length === 2 ? "grid grid-cols-2 gap-3" : ""}>
               {pair.map(key => (
@@ -200,7 +236,6 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
             </div>
           ))}
 
-          {/* State always visible */}
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Estado">
               <select value={form.state || config.pipelineStages[0]?.key} onChange={e => update("state", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
@@ -210,7 +245,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
             {!isFieldEnabled("assignedTo") && (
               <FormField label="Asignado">
                 <select value={form.assignedTo || ""} onChange={e => update("assignedTo", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
-                  <option value="">Sin asignar</option>{USERS.map(u => <option key={u} value={u}>{u}</option>)}
+                  <option value="">Sin asignar</option>{activeUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                 </select>
               </FormField>
             )}

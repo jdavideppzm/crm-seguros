@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { User, Calendar, TrendingUp, DollarSign, Target, BarChart3 } from "lucide-react";
-import type { Lead, PipelineStatus, PipelineStageConfig } from "@/types/crm";
+import type { Lead, PipelineStageConfig, CrmConfig } from "@/types/crm";
 import { DEFAULT_PIPELINE_STAGES } from "@/types/crm";
 
 interface KanbanViewProps {
@@ -8,20 +8,18 @@ interface KanbanViewProps {
   onSelectLead: (lead: Lead) => void;
   statusLabels?: Record<string, string>;
   pipelineStages?: PipelineStageConfig[];
+  config?: CrmConfig;
 }
 
-export function KanbanView({ leads, onSelectLead, statusLabels = {}, pipelineStages }: KanbanViewProps) {
-  const stages = pipelineStages || DEFAULT_PIPELINE_STAGES;
+export function KanbanView({ leads, onSelectLead, statusLabels = {}, pipelineStages, config }: KanbanViewProps) {
+  const stages = (pipelineStages || DEFAULT_PIPELINE_STAGES).sort((a, b) => a.order - b.order);
 
   const grouped = useMemo(() => {
     const map: Record<string, Lead[]> = {};
     stages.forEach((s) => (map[s.key] = []));
     leads.forEach((l) => {
       if (map[l.state]) map[l.state].push(l);
-      else {
-        // Lead has a state not in current stages, put in first column
-        if (stages.length > 0) map[stages[0].key].push(l);
-      }
+      else if (stages.length > 0) map[stages[0].key].push(l);
     });
     return map;
   }, [leads, stages]);
@@ -33,30 +31,41 @@ export function KanbanView({ leads, onSelectLead, statusLabels = {}, pipelineSta
 
   const totalValue = leads.reduce((s, l) => s + l.monto, 0);
   const avgTicket = leads.length ? totalValue / leads.length : 0;
-  const wonLeads = leads.filter(l => l.state === "lograr" || l.state === "bienvenida");
+  const wonStages = stages.filter(s => s.finalType === "ganado").map(s => s.key);
+  const wonLeads = leads.filter(l => wonStages.includes(l.state));
   const conversionRate = leads.length ? Math.round((wonLeads.length / leads.length) * 100) : 0;
+  
+  const totalComision = config ? leads.reduce((s, l) => {
+    const company = config.insuranceCompanies.find(c => c.name === l.insurance);
+    return s + ((l.valorPrima || 0) * (company?.commission || 0) / 100);
+  }, 0) : 0;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-4 pt-4 pb-2">
         <div className="grid grid-cols-4 gap-3">
           <KpiCard icon={<DollarSign size={16} />} label="Cartera Total" value={formatMonto(totalValue)} color="text-primary" />
-          <KpiCard icon={<Target size={16} />} label="Total Leads" value={leads.length.toString()} color="text-status-seguimiento" />
-          <KpiCard icon={<TrendingUp size={16} />} label="Tasa Cierre" value={`${conversionRate}%`} color="text-status-lograr" />
-          <KpiCard icon={<BarChart3 size={16} />} label="Ticket Promedio" value={formatMonto(avgTicket)} color="text-status-bienvenida" />
+          <KpiCard icon={<Target size={16} />} label="Total Leads" value={leads.length.toString()} color="text-amber-500" />
+          <KpiCard icon={<TrendingUp size={16} />} label="Tasa Cierre" value={`${conversionRate}%`} color="text-green-500" />
+          <KpiCard icon={<BarChart3 size={16} />} label={totalComision > 0 ? "Comisión Est." : "Ticket Promedio"} value={formatMonto(totalComision > 0 ? totalComision : avgTicket)} color="text-cyan-500" />
         </div>
       </div>
 
       <div className="flex-1 overflow-x-auto p-4 pt-2">
         <div className="flex gap-3 h-full min-w-max">
           {stages.map((stage) => (
-            <div key={stage.key} className="w-[260px] flex flex-col bg-secondary/50 rounded-xl">
+            <div key={stage.key} className={`w-[260px] flex flex-col rounded-xl ${stage.isFinal ? "bg-muted/80" : "bg-secondary/50"}`}>
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
                   <span className="text-sm font-semibold text-foreground">{stage.label}</span>
                   <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">{(grouped[stage.key] || []).length}</span>
                 </div>
+                {stage.isFinal && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${stage.finalType === "ganado" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {stage.finalType === "ganado" ? "✓" : "✕"}
+                  </span>
+                )}
               </div>
               <p className="px-4 pb-2 text-xs text-muted-foreground">
                 Total: {formatMonto(colTotal(stage.key))}
@@ -76,7 +85,7 @@ export function KanbanView({ leads, onSelectLead, statusLabels = {}, pipelineSta
                     </div>
                     {lead.paymentStatus && (
                       <div className="mb-1.5">
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: getPaymentColor(lead.paymentStatus) + "20", color: getPaymentColor(lead.paymentStatus) }}>
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: getPaymentColor(lead.paymentStatus, config) + "20", color: getPaymentColor(lead.paymentStatus, config) }}>
                           {lead.paymentStatus}
                         </span>
                       </div>
@@ -114,7 +123,11 @@ function KpiCard({ icon, label, value, color }: { icon: React.ReactNode; label: 
   );
 }
 
-function getPaymentColor(status: string): string {
+function getPaymentColor(status: string, config?: CrmConfig): string {
+  if (config) {
+    const ps = config.paymentStatuses.find(p => p.label === status);
+    if (ps) return ps.color;
+  }
   const colors: Record<string, string> = {
     "Vendida": "#9CA3AF", "Pagado": "#22C55E", "En proceso": "#EAB308", "No pagado": "#EF4444",
   };
