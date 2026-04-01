@@ -596,6 +596,10 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   leadOrigins: DEFAULT_LEAD_ORIGINS,
   automationRules: DEFAULT_AUTOMATION_RULES,
   users: DEFAULT_CRM_USERS,
+  companyInfo: DEFAULT_COMPANY_INFO,
+  userPermissions: {},
+  themePreset: "default",
+  layoutConfig: DEFAULT_LAYOUT_CONFIG,
 };
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
