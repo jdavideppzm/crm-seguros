@@ -456,6 +456,112 @@ export const DEFAULT_LEAD_FORM_FIELDS: LeadFormFieldConfig[] = [
   { key: "assignedTo", label: "Asignado a", enabled: true, required: false },
 ];
 
+// === Datos de la Empresa ===
+
+export interface CompanyInfo {
+  name: string;
+  nit: string;
+  address: string;
+  phone: string;
+  logoUrl?: string;
+}
+
+export const DEFAULT_COMPANY_INFO: CompanyInfo = {
+  name: "",
+  nit: "",
+  address: "",
+  phone: "",
+};
+
+// === User Permissions ===
+
+export interface UserPermissions {
+  sections: Record<string, boolean>;
+  actions: Record<string, boolean>;
+}
+
+export const DEFAULT_USER_PERMISSIONS: UserPermissions = {
+  sections: {
+    pipeline: true, kanban: true, agenda: true, reports: true, settings: false,
+  },
+  actions: {
+    create_leads: true, edit_leads: true, delete_leads: true,
+    export_data: false, manage_users: false, manage_automations: false,
+  },
+};
+
+export const ADMIN_PERMISSIONS: UserPermissions = {
+  sections: {
+    pipeline: true, kanban: true, agenda: true, reports: true, settings: true,
+  },
+  actions: {
+    create_leads: true, edit_leads: true, delete_leads: true,
+    export_data: true, manage_users: true, manage_automations: true,
+  },
+};
+
+export const SECTION_LABELS: Record<string, string> = {
+  pipeline: "Pipeline de ventas",
+  kanban: "Vista Kanban",
+  agenda: "Agenda",
+  reports: "Reportes",
+  settings: "Configuración",
+};
+
+export const ACTION_LABELS: Record<string, string> = {
+  create_leads: "Crear leads",
+  edit_leads: "Editar leads",
+  delete_leads: "Eliminar leads",
+  export_data: "Exportar datos",
+  manage_users: "Gestionar usuarios",
+  manage_automations: "Gestionar automatizaciones",
+};
+
+// === Theme Presets ===
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  primary: string;
+  background: string;
+  card: string;
+  sidebarBg: string;
+  accent: string;
+}
+
+export const THEME_PRESETS: ThemePreset[] = [
+  { id: "default", name: "Azul Corporativo", primary: "221 83% 53%", background: "210 20% 98%", card: "0 0% 100%", sidebarBg: "222 47% 11%", accent: "220 14% 96%" },
+  { id: "emerald", name: "Esmeralda", primary: "160 84% 39%", background: "160 20% 97%", card: "0 0% 100%", sidebarBg: "160 30% 10%", accent: "160 14% 95%" },
+  { id: "violet", name: "Violeta", primary: "263 70% 50%", background: "260 20% 98%", card: "0 0% 100%", sidebarBg: "263 40% 12%", accent: "260 14% 96%" },
+  { id: "amber", name: "Ámbar", primary: "38 92% 50%", background: "40 20% 97%", card: "0 0% 100%", sidebarBg: "30 30% 10%", accent: "40 14% 95%" },
+  { id: "rose", name: "Rosa", primary: "347 77% 50%", background: "350 20% 98%", card: "0 0% 100%", sidebarBg: "347 40% 10%", accent: "350 14% 96%" },
+  { id: "slate", name: "Pizarra Oscuro", primary: "215 20% 65%", background: "222 47% 8%", card: "222 47% 12%", sidebarBg: "222 47% 6%", accent: "222 20% 18%" },
+  { id: "ocean", name: "Océano", primary: "199 89% 48%", background: "200 20% 97%", card: "0 0% 100%", sidebarBg: "200 40% 10%", accent: "200 14% 95%" },
+  { id: "sunset", name: "Atardecer", primary: "20 90% 48%", background: "20 20% 97%", card: "0 0% 100%", sidebarBg: "15 35% 10%", accent: "20 14% 95%" },
+];
+
+// === Layout Presets ===
+
+export type SidebarStyle = "dark" | "light" | "colored";
+export type CardStyle = "rounded" | "flat" | "bordered";
+export type DensityStyle = "compact" | "normal" | "comfortable";
+
+export interface LayoutConfig {
+  sidebarStyle: SidebarStyle;
+  cardStyle: CardStyle;
+  density: DensityStyle;
+  showKpiCards: boolean;
+  tableStriped: boolean;
+}
+
+export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
+  sidebarStyle: "dark",
+  cardStyle: "rounded",
+  density: "normal",
+  showKpiCards: true,
+  tableStriped: false,
+};
+
 export interface CrmConfig {
   paymentStatuses: PaymentStatusConfig[];
   idTypes: IdTypeConfig[];
@@ -470,6 +576,10 @@ export interface CrmConfig {
   leadOrigins: LeadOrigin[];
   automationRules: AutomationRule[];
   users: CrmUser[];
+  companyInfo: CompanyInfo;
+  userPermissions: Record<string, UserPermissions>;
+  themePreset: string;
+  layoutConfig: LayoutConfig;
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
