@@ -346,25 +346,69 @@ export interface AutomationAction {
 
 export const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
   {
-    id: "auto1",
-    name: "Contactado → Crear seguimiento en agenda",
-    enabled: true,
-    trigger: { type: "status_change", toStatus: "contactado" },
-    action: { type: "create_activity", activityText: "Seguimiento automático tras contacto", activityType: "call" },
+    id: "auto1", name: "Nuevo lead → Contacto inmediato", enabled: true,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Contactar cliente nuevo lo antes posible", activityType: "call" },
   },
   {
-    id: "auto2",
-    name: "Emitido → Marcar como ganado",
-    enabled: false,
+    id: "auto2", name: "Nuevo lead → Asignación automática", enabled: false,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Lead asignado automáticamente", activityType: "note" },
+  },
+  {
+    id: "auto3", name: "Contactado → Crear seguimiento", enabled: true,
+    trigger: { type: "status_change", toStatus: "contactado" },
+    action: { type: "create_activity", activityText: "Hacer seguimiento al cliente", activityType: "call" },
+  },
+  {
+    id: "auto4", name: "Cotización → Enviar propuesta", enabled: true,
+    trigger: { type: "status_change", toStatus: "cotizacion" },
+    action: { type: "create_activity", activityText: "Enviar cotización al cliente", activityType: "note" },
+  },
+  {
+    id: "auto5", name: "Seguimiento → Llamada", enabled: true,
+    trigger: { type: "status_change", toStatus: "seguimiento" },
+    action: { type: "create_activity", activityText: "Llamar cliente para cierre", activityType: "call" },
+  },
+  {
+    id: "auto6", name: "Inactividad 3 días", enabled: true,
+    trigger: { type: "days_inactive", daysInactive: 3 },
+    action: { type: "create_activity", activityText: "Retomar cliente inactivo", activityType: "call" },
+  },
+  {
+    id: "auto7", name: "Inactividad 5 días → Alerta", enabled: true,
+    trigger: { type: "days_inactive", daysInactive: 5 },
+    action: { type: "send_alert", alertMessage: "Lead sin gestión hace 5 días" },
+  },
+  {
+    id: "auto8", name: "Emitido → Venta ganada", enabled: true,
     trigger: { type: "status_change", toStatus: "emitido" },
     action: { type: "change_status", targetStatus: "ganado" },
   },
   {
-    id: "auto3",
-    name: "Alerta por inactividad (5 días)",
-    enabled: true,
-    trigger: { type: "days_inactive", daysInactive: 5 },
-    action: { type: "send_alert", alertMessage: "Lead sin actividad por más de 5 días" },
+    id: "auto9", name: "Ganado → Postventa", enabled: true,
+    trigger: { type: "status_change", toStatus: "ganado" },
+    action: { type: "create_activity", activityText: "Solicitar referidos al cliente", activityType: "note" },
+  },
+  {
+    id: "auto10", name: "Ganado → Renovación", enabled: true,
+    trigger: { type: "status_change", toStatus: "ganado" },
+    action: { type: "create_activity", activityText: "Contactar cliente para renovación de póliza", activityType: "call" },
+  },
+  {
+    id: "auto11", name: "Perdido → Reintento", enabled: true,
+    trigger: { type: "status_change", toStatus: "perdido" },
+    action: { type: "create_activity", activityText: "Recontactar cliente perdido", activityType: "call" },
+  },
+  {
+    id: "auto12", name: "Lead asignado → Acción", enabled: true,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Contactar lead asignado", activityType: "call" },
+  },
+  {
+    id: "auto13", name: "Todo riesgo → Prioridad alta", enabled: false,
+    trigger: { type: "status_change", toStatus: "nuevo" },
+    action: { type: "create_activity", activityText: "Cliente prioritario - póliza todo riesgo", activityType: "note" },
   },
 ];
 
