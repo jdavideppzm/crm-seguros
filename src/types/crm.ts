@@ -346,25 +346,69 @@ export interface AutomationAction {
 
 export const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
   {
-    id: "auto1",
-    name: "Contactado → Crear seguimiento en agenda",
-    enabled: true,
-    trigger: { type: "status_change", toStatus: "contactado" },
-    action: { type: "create_activity", activityText: "Seguimiento automático tras contacto", activityType: "call" },
+    id: "auto1", name: "Nuevo lead → Contacto inmediato", enabled: true,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Contactar cliente nuevo lo antes posible", activityType: "call" },
   },
   {
-    id: "auto2",
-    name: "Emitido → Marcar como ganado",
-    enabled: false,
+    id: "auto2", name: "Nuevo lead → Asignación automática", enabled: false,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Lead asignado automáticamente", activityType: "note" },
+  },
+  {
+    id: "auto3", name: "Contactado → Crear seguimiento", enabled: true,
+    trigger: { type: "status_change", toStatus: "contactado" },
+    action: { type: "create_activity", activityText: "Hacer seguimiento al cliente", activityType: "call" },
+  },
+  {
+    id: "auto4", name: "Cotización → Enviar propuesta", enabled: true,
+    trigger: { type: "status_change", toStatus: "cotizacion" },
+    action: { type: "create_activity", activityText: "Enviar cotización al cliente", activityType: "note" },
+  },
+  {
+    id: "auto5", name: "Seguimiento → Llamada", enabled: true,
+    trigger: { type: "status_change", toStatus: "seguimiento" },
+    action: { type: "create_activity", activityText: "Llamar cliente para cierre", activityType: "call" },
+  },
+  {
+    id: "auto6", name: "Inactividad 3 días", enabled: true,
+    trigger: { type: "days_inactive", daysInactive: 3 },
+    action: { type: "create_activity", activityText: "Retomar cliente inactivo", activityType: "call" },
+  },
+  {
+    id: "auto7", name: "Inactividad 5 días → Alerta", enabled: true,
+    trigger: { type: "days_inactive", daysInactive: 5 },
+    action: { type: "send_alert", alertMessage: "Lead sin gestión hace 5 días" },
+  },
+  {
+    id: "auto8", name: "Emitido → Venta ganada", enabled: true,
     trigger: { type: "status_change", toStatus: "emitido" },
     action: { type: "change_status", targetStatus: "ganado" },
   },
   {
-    id: "auto3",
-    name: "Alerta por inactividad (5 días)",
-    enabled: true,
-    trigger: { type: "days_inactive", daysInactive: 5 },
-    action: { type: "send_alert", alertMessage: "Lead sin actividad por más de 5 días" },
+    id: "auto9", name: "Ganado → Postventa", enabled: true,
+    trigger: { type: "status_change", toStatus: "ganado" },
+    action: { type: "create_activity", activityText: "Solicitar referidos al cliente", activityType: "note" },
+  },
+  {
+    id: "auto10", name: "Ganado → Renovación", enabled: true,
+    trigger: { type: "status_change", toStatus: "ganado" },
+    action: { type: "create_activity", activityText: "Contactar cliente para renovación de póliza", activityType: "call" },
+  },
+  {
+    id: "auto11", name: "Perdido → Reintento", enabled: true,
+    trigger: { type: "status_change", toStatus: "perdido" },
+    action: { type: "create_activity", activityText: "Recontactar cliente perdido", activityType: "call" },
+  },
+  {
+    id: "auto12", name: "Lead asignado → Acción", enabled: true,
+    trigger: { type: "lead_created" },
+    action: { type: "create_activity", activityText: "Contactar lead asignado", activityType: "call" },
+  },
+  {
+    id: "auto13", name: "Todo riesgo → Prioridad alta", enabled: false,
+    trigger: { type: "status_change", toStatus: "nuevo" },
+    action: { type: "create_activity", activityText: "Cliente prioritario - póliza todo riesgo", activityType: "note" },
   },
 ];
 
@@ -456,6 +500,112 @@ export const DEFAULT_LEAD_FORM_FIELDS: LeadFormFieldConfig[] = [
   { key: "assignedTo", label: "Asignado a", enabled: true, required: false },
 ];
 
+// === Datos de la Empresa ===
+
+export interface CompanyInfo {
+  name: string;
+  nit: string;
+  address: string;
+  phone: string;
+  logoUrl?: string;
+}
+
+export const DEFAULT_COMPANY_INFO: CompanyInfo = {
+  name: "",
+  nit: "",
+  address: "",
+  phone: "",
+};
+
+// === User Permissions ===
+
+export interface UserPermissions {
+  sections: Record<string, boolean>;
+  actions: Record<string, boolean>;
+}
+
+export const DEFAULT_USER_PERMISSIONS: UserPermissions = {
+  sections: {
+    pipeline: true, kanban: true, agenda: true, reports: true, settings: false,
+  },
+  actions: {
+    create_leads: true, edit_leads: true, delete_leads: true,
+    export_data: false, manage_users: false, manage_automations: false,
+  },
+};
+
+export const ADMIN_PERMISSIONS: UserPermissions = {
+  sections: {
+    pipeline: true, kanban: true, agenda: true, reports: true, settings: true,
+  },
+  actions: {
+    create_leads: true, edit_leads: true, delete_leads: true,
+    export_data: true, manage_users: true, manage_automations: true,
+  },
+};
+
+export const SECTION_LABELS: Record<string, string> = {
+  pipeline: "Pipeline de ventas",
+  kanban: "Vista Kanban",
+  agenda: "Agenda",
+  reports: "Reportes",
+  settings: "Configuración",
+};
+
+export const ACTION_LABELS: Record<string, string> = {
+  create_leads: "Crear leads",
+  edit_leads: "Editar leads",
+  delete_leads: "Eliminar leads",
+  export_data: "Exportar datos",
+  manage_users: "Gestionar usuarios",
+  manage_automations: "Gestionar automatizaciones",
+};
+
+// === Theme Presets ===
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  primary: string;
+  background: string;
+  card: string;
+  sidebarBg: string;
+  accent: string;
+}
+
+export const THEME_PRESETS: ThemePreset[] = [
+  { id: "default", name: "Azul Corporativo", primary: "221 83% 53%", background: "210 20% 98%", card: "0 0% 100%", sidebarBg: "222 47% 11%", accent: "220 14% 96%" },
+  { id: "emerald", name: "Esmeralda", primary: "160 84% 39%", background: "160 20% 97%", card: "0 0% 100%", sidebarBg: "160 30% 10%", accent: "160 14% 95%" },
+  { id: "violet", name: "Violeta", primary: "263 70% 50%", background: "260 20% 98%", card: "0 0% 100%", sidebarBg: "263 40% 12%", accent: "260 14% 96%" },
+  { id: "amber", name: "Ámbar", primary: "38 92% 50%", background: "40 20% 97%", card: "0 0% 100%", sidebarBg: "30 30% 10%", accent: "40 14% 95%" },
+  { id: "rose", name: "Rosa", primary: "347 77% 50%", background: "350 20% 98%", card: "0 0% 100%", sidebarBg: "347 40% 10%", accent: "350 14% 96%" },
+  { id: "slate", name: "Pizarra Oscuro", primary: "215 20% 65%", background: "222 47% 8%", card: "222 47% 12%", sidebarBg: "222 47% 6%", accent: "222 20% 18%" },
+  { id: "ocean", name: "Océano", primary: "199 89% 48%", background: "200 20% 97%", card: "0 0% 100%", sidebarBg: "200 40% 10%", accent: "200 14% 95%" },
+  { id: "sunset", name: "Atardecer", primary: "20 90% 48%", background: "20 20% 97%", card: "0 0% 100%", sidebarBg: "15 35% 10%", accent: "20 14% 95%" },
+];
+
+// === Layout Presets ===
+
+export type SidebarStyle = "dark" | "light" | "colored";
+export type CardStyle = "rounded" | "flat" | "bordered";
+export type DensityStyle = "compact" | "normal" | "comfortable";
+
+export interface LayoutConfig {
+  sidebarStyle: SidebarStyle;
+  cardStyle: CardStyle;
+  density: DensityStyle;
+  showKpiCards: boolean;
+  tableStriped: boolean;
+}
+
+export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
+  sidebarStyle: "dark",
+  cardStyle: "rounded",
+  density: "normal",
+  showKpiCards: true,
+  tableStriped: false,
+};
+
 export interface CrmConfig {
   paymentStatuses: PaymentStatusConfig[];
   idTypes: IdTypeConfig[];
@@ -470,6 +620,10 @@ export interface CrmConfig {
   leadOrigins: LeadOrigin[];
   automationRules: AutomationRule[];
   users: CrmUser[];
+  companyInfo: CompanyInfo;
+  userPermissions: Record<string, UserPermissions>;
+  themePreset: string;
+  layoutConfig: LayoutConfig;
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
@@ -486,6 +640,10 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   leadOrigins: DEFAULT_LEAD_ORIGINS,
   automationRules: DEFAULT_AUTOMATION_RULES,
   users: DEFAULT_CRM_USERS,
+  companyInfo: DEFAULT_COMPANY_INFO,
+  userPermissions: {},
+  themePreset: "default",
+  layoutConfig: DEFAULT_LAYOUT_CONFIG,
 };
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());

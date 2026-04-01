@@ -3,11 +3,16 @@ import {
   Settings, Table2, LayoutGrid, BarChart3, CalendarDays,
   Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2, Check,
   Shield, FileText, Users, Zap, Tag, MapPin, CreditCard, ChevronRight,
+  Building2, Palette, Image, Save, ChevronDown, ChevronUp,
 } from "lucide-react";
 import type {
   CrmConfig, PaymentStatusConfig, IdTypeConfig, CustomReportSection,
   PipelineStageConfig, LeadFormFieldConfig, InsuranceCompany, PolicyType,
-  LeadOrigin, AutomationRule, CrmUser,
+  LeadOrigin, AutomationRule, CrmUser, UserPermissions,
+} from "@/types/crm";
+import {
+  DEFAULT_USER_PERMISSIONS, ADMIN_PERMISSIONS,
+  SECTION_LABELS, ACTION_LABELS, THEME_PRESETS,
 } from "@/types/crm";
 
 interface SettingsViewProps {
@@ -15,16 +20,18 @@ interface SettingsViewProps {
   onUpdateConfig: (config: CrmConfig) => void;
 }
 
-type SettingsSection = "general" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations";
+type SettingsSection = "general" | "company" | "customization" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations";
 
 const SETTINGS_SECTIONS: { key: SettingsSection; label: string; icon: typeof Settings; description: string }[] = [
-  { key: "general", label: "General", icon: Settings, description: "Vistas, formularios y tipos de documento" },
-  { key: "users", label: "Usuarios y permisos", icon: Users, description: "Gestión de equipo comercial" },
-  { key: "pipeline", label: "Pipeline de ventas", icon: Table2, description: "Etapas del proceso y estados finales" },
-  { key: "insurers", label: "Aseguradoras", icon: Shield, description: "Catálogo de aseguradoras y comisiones" },
-  { key: "policies", label: "Tipos de póliza", icon: FileText, description: "Todo riesgo, parcial, SOAT..." },
+  { key: "general", label: "General", icon: Settings, description: "Vistas, formularios y documentos" },
+  { key: "company", label: "Datos de la empresa", icon: Building2, description: "Nombre, NIT, logo y más" },
+  { key: "customization", label: "Personalización", icon: Palette, description: "Temas, colores y diseño" },
+  { key: "users", label: "Usuarios y permisos", icon: Users, description: "Equipo, roles y accesos" },
+  { key: "pipeline", label: "Pipeline de ventas", icon: Table2, description: "Etapas y estados finales" },
+  { key: "insurers", label: "Aseguradoras", icon: Shield, description: "Catálogo y comisiones" },
+  { key: "policies", label: "Tipos de póliza", icon: FileText, description: "Productos disponibles" },
   { key: "origins", label: "Origen de leads", icon: MapPin, description: "Cómo llegan los clientes" },
-  { key: "payments", label: "Estados de pago", icon: CreditCard, description: "Semáforo y condiciones de pago" },
+  { key: "payments", label: "Estados de pago", icon: CreditCard, description: "Semáforo de cobros" },
   { key: "automations", label: "Automatizaciones", icon: Zap, description: "Reglas trigger → acción" },
 ];
 
@@ -95,6 +102,8 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl mx-auto space-y-6">
           {activeSection === "general" && <GeneralSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "company" && <CompanySection config={config} updateConfig={updateConfig} />}
+          {activeSection === "customization" && <CustomizationSection config={config} updateConfig={updateConfig} />}
           {activeSection === "users" && <UsersSection config={config} updateConfig={updateConfig} />}
           {activeSection === "pipeline" && <PipelineSection config={config} updateConfig={updateConfig} />}
           {activeSection === "insurers" && <InsurersSection config={config} updateConfig={updateConfig} />}
@@ -105,6 +114,227 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ===== COMPANY =====
+function CompanySection({ config, updateConfig }: { config: CrmConfig; updateConfig: (p: Partial<CrmConfig>) => void }) {
+  const [form, setForm] = useState(config.companyInfo);
+
+  const handleSave = () => updateConfig({ companyInfo: form });
+
+  return (
+    <>
+      <SectionHeader title="Datos de la Empresa" description="Información que aparece en facturas y documentos." />
+      <ConfigCard title="" description="">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Nombre</label>
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="Nombre de la empresa" className="w-full text-sm py-2.5 px-3 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">NIT</label>
+            <input value={form.nit} onChange={e => setForm({ ...form, nit: e.target.value })}
+              placeholder="900.123.456-7" className="w-full text-sm py-2.5 px-3 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground font-mono" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Dirección</label>
+            <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
+              placeholder="Cra 10 #20-30, Bogotá" className="w-full text-sm py-2.5 px-3 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Teléfono</label>
+            <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+              placeholder="601-555-1234" className="w-full text-sm py-2.5 px-3 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Logo</label>
+            <div className="flex items-center gap-4">
+              {form.logoUrl ? (
+                <div className="relative">
+                  <img src={form.logoUrl} alt="Logo" className="w-16 h-16 rounded-lg object-contain border border-border bg-muted/30" />
+                  <button onClick={() => setForm({ ...form, logoUrl: undefined })}
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border hover:border-primary/40 cursor-pointer transition-colors">
+                  <Image size={20} className="text-muted-foreground" />
+                  <span className="text-xs text-primary font-medium">Subir imagen</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setForm({ ...form, logoUrl: ev.target?.result as string });
+                      reader.readAsDataURL(file);
+                    }
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+          <button onClick={handleSave}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Save size={14} /> Guardar
+          </button>
+        </div>
+      </ConfigCard>
+    </>
+  );
+}
+
+// ===== CUSTOMIZATION =====
+function CustomizationSection({ config, updateConfig }: { config: CrmConfig; updateConfig: (p: Partial<CrmConfig>) => void }) {
+  const layout = config.layoutConfig;
+
+  const applyTheme = (presetId: string) => {
+    const preset = THEME_PRESETS.find(p => p.id === presetId);
+    if (!preset) return;
+    updateConfig({ themePreset: presetId });
+    // Apply CSS variables
+    const root = document.documentElement;
+    root.style.setProperty("--primary", preset.primary);
+    root.style.setProperty("--background", preset.background);
+    root.style.setProperty("--card", preset.card);
+    root.style.setProperty("--sidebar-bg", preset.sidebarBg);
+    root.style.setProperty("--accent", preset.accent);
+  };
+
+  const updateLayout = (partial: Partial<typeof layout>) => {
+    updateConfig({ layoutConfig: { ...layout, ...partial } });
+  };
+
+  return (
+    <>
+      <SectionHeader title="Personalización" description="Ajusta la apariencia y diseño del CRM." />
+
+      <ConfigCard title="Temas de color" description="Selecciona un esquema de colores para todo el sistema.">
+        <div className="grid grid-cols-2 gap-3">
+          {THEME_PRESETS.map((preset) => {
+            const isActive = config.themePreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                onClick={() => applyTheme(preset.id)}
+                className={`p-3 rounded-xl border-2 transition-all text-left ${
+                  isActive ? "border-primary shadow-md" : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex gap-1">
+                    <span className="w-4 h-4 rounded-full" style={{ backgroundColor: `hsl(${preset.primary})` }} />
+                    <span className="w-4 h-4 rounded-full" style={{ backgroundColor: `hsl(${preset.sidebarBg})` }} />
+                    <span className="w-4 h-4 rounded-full" style={{ backgroundColor: `hsl(${preset.accent})` }} />
+                  </div>
+                  {isActive && <Check size={12} className="text-primary ml-auto" />}
+                </div>
+                <p className="text-xs font-medium text-foreground">{preset.name}</p>
+              </button>
+            );
+          })}
+        </div>
+      </ConfigCard>
+
+      {config.companyInfo.logoUrl && (
+        <ConfigCard title="Colores de la empresa" description="Usa los colores de tu marca como tema principal.">
+          <p className="text-xs text-muted-foreground mb-3">Tu logo está configurado. Puedes ajustar el color primario para que coincida con tu identidad de marca.</p>
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-foreground">Color primario personalizado:</label>
+            <input type="color" defaultValue={`hsl(${THEME_PRESETS.find(p => p.id === config.themePreset)?.primary || "221 83% 53%"})`}
+              onChange={e => {
+                const root = document.documentElement;
+                // Convert hex to HSL roughly
+                const hex = e.target.value;
+                const r = parseInt(hex.slice(1, 3), 16) / 255;
+                const g = parseInt(hex.slice(3, 5), 16) / 255;
+                const b = parseInt(hex.slice(5, 7), 16) / 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                const l = (max + min) / 2;
+                let h = 0, s = 0;
+                if (max !== min) {
+                  const d = max - min;
+                  s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+                  else if (max === g) h = ((b - r) / d + 2) / 6;
+                  else h = ((r - g) / d + 4) / 6;
+                }
+                root.style.setProperty("--primary", `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+              }}
+              className="w-10 h-10 rounded-lg border-0 cursor-pointer"
+            />
+          </div>
+        </ConfigCard>
+      )}
+
+      <ConfigCard title="Estilo del Sidebar" description="Elige cómo se ve la barra lateral.">
+        <div className="flex gap-2">
+          {([
+            { key: "dark", label: "Oscuro", desc: "Fondo oscuro clásico" },
+            { key: "light", label: "Claro", desc: "Fondo claro limpio" },
+            { key: "colored", label: "Color", desc: "Usa el color primario" },
+          ] as const).map(opt => (
+            <button key={opt.key} onClick={() => updateLayout({ sidebarStyle: opt.key })}
+              className={`flex-1 p-3 rounded-lg border-2 text-center transition-all ${
+                layout.sidebarStyle === opt.key ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              }`}>
+              <p className="text-xs font-medium text-foreground">{opt.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </ConfigCard>
+
+      <ConfigCard title="Estilo de tarjetas" description="Apariencia de las tarjetas en el sistema.">
+        <div className="flex gap-2">
+          {([
+            { key: "rounded", label: "Redondeadas", desc: "Esquinas suaves" },
+            { key: "flat", label: "Planas", desc: "Sin bordes, minimalista" },
+            { key: "bordered", label: "Enmarcadas", desc: "Bordes definidos" },
+          ] as const).map(opt => (
+            <button key={opt.key} onClick={() => updateLayout({ cardStyle: opt.key })}
+              className={`flex-1 p-3 rounded-lg border-2 text-center transition-all ${
+                layout.cardStyle === opt.key ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              }`}>
+              <p className="text-xs font-medium text-foreground">{opt.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </ConfigCard>
+
+      <ConfigCard title="Densidad" description="Cuánto espacio entre los elementos.">
+        <div className="flex gap-2">
+          {([
+            { key: "compact", label: "Compacta", desc: "Más datos en pantalla" },
+            { key: "normal", label: "Normal", desc: "Balance equilibrado" },
+            { key: "comfortable", label: "Cómoda", desc: "Más espacio y aire" },
+          ] as const).map(opt => (
+            <button key={opt.key} onClick={() => updateLayout({ density: opt.key })}
+              className={`flex-1 p-3 rounded-lg border-2 text-center transition-all ${
+                layout.density === opt.key ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              }`}>
+              <p className="text-xs font-medium text-foreground">{opt.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </ConfigCard>
+
+      <ConfigCard title="Opciones adicionales" description="Ajustes finos de la interfaz.">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50">
+            <div><p className="text-sm text-foreground">Tarjetas de KPIs</p><p className="text-[10px] text-muted-foreground">Mostrar métricas rápidas en Kanban</p></div>
+            <ToggleSwitch checked={layout.showKpiCards} onChange={() => updateLayout({ showKpiCards: !layout.showKpiCards })} />
+          </div>
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50">
+            <div><p className="text-sm text-foreground">Tabla alternada</p><p className="text-[10px] text-muted-foreground">Filas con color alterno en pipeline</p></div>
+            <ToggleSwitch checked={layout.tableStriped} onChange={() => updateLayout({ tableStriped: !layout.tableStriped })} />
+          </div>
+        </div>
+      </ConfigCard>
+    </>
   );
 }
 
@@ -240,31 +470,98 @@ function GeneralSection({ config, updateConfig }: { config: CrmConfig; updateCon
 function UsersSection({ config, updateConfig }: { config: CrmConfig; updateConfig: (p: Partial<CrmConfig>) => void }) {
   const [adding, setAdding] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "vendedor" as const });
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
+  const getUserPerms = (userId: string, role: string): UserPermissions => {
+    if (config.userPermissions[userId]) return config.userPermissions[userId];
+    return role === "admin" ? ADMIN_PERMISSIONS : DEFAULT_USER_PERMISSIONS;
+  };
+
+  const updateUserPerms = (userId: string, perms: UserPermissions) => {
+    updateConfig({ userPermissions: { ...config.userPermissions, [userId]: perms } });
+  };
 
   return (
     <>
-      <SectionHeader title="Usuarios y permisos" description="Gestiona tu equipo comercial, roles y asignación de leads." />
+      <SectionHeader title="Usuarios y permisos" description="Gestiona tu equipo comercial, roles y accesos detallados." />
 
-      <ConfigCard title="Equipo" description="Admin: acceso completo. Vendedor: solo sus leads asignados." onAdd={() => setAdding(true)}>
+      <ConfigCard title="Equipo" description="Haz clic en un usuario para ver y editar sus permisos." onAdd={() => setAdding(true)}>
         <div className="space-y-2">
-          {config.users.map((user) => (
-            <div key={user.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{user.name.charAt(0)}</div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{user.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{user.email}</p>
+          {config.users.map((user) => {
+            const isExpanded = expandedUser === user.id;
+            const perms = getUserPerms(user.id, user.role);
+
+            return (
+              <div key={user.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                <div
+                  className="flex items-center justify-between py-2.5 px-3 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => setExpandedUser(isExpanded ? null : user.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{user.name.charAt(0)}</div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{user.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${user.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {user.role === "admin" ? "Admin" : "Vendedor"}
+                    </span>
+                    <ToggleSwitch checked={user.active} onChange={() => { updateConfig({ users: config.users.map(u => u.id === user.id ? { ...u, active: !u.active } : u) }); }} />
+                    <button onClick={(e) => { e.stopPropagation(); updateConfig({ users: config.users.filter(u => u.id !== user.id) }); }} className="p-1 rounded hover:bg-destructive/10"><Trash2 size={12} className="text-destructive" /></button>
+                    {isExpanded ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
+                  </div>
                 </div>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-border bg-muted/10">
+                    <div className="mt-3 mb-2">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rol</label>
+                      <select
+                        value={user.role}
+                        onChange={e => {
+                          const newRole = e.target.value as "admin" | "vendedor";
+                          updateConfig({ users: config.users.map(u => u.id === user.id ? { ...u, role: newRole } : u) });
+                          updateUserPerms(user.id, newRole === "admin" ? ADMIN_PERMISSIONS : DEFAULT_USER_PERMISSIONS);
+                        }}
+                        className="w-full mt-1 text-xs py-1.5 px-2 bg-background border border-border rounded-md"
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="vendedor">Vendedor</option>
+                      </select>
+                    </div>
+
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-3 mb-2">Secciones visibles</p>
+                    <div className="space-y-1.5">
+                      {Object.entries(SECTION_LABELS).map(([key, label]) => (
+                        <div key={key} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
+                          <span className="text-xs text-foreground">{label}</span>
+                          <ToggleSwitch
+                            checked={perms.sections[key] ?? false}
+                            onChange={() => updateUserPerms(user.id, { ...perms, sections: { ...perms.sections, [key]: !perms.sections[key] } })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-3 mb-2">Acciones permitidas</p>
+                    <div className="space-y-1.5">
+                      {Object.entries(ACTION_LABELS).map(([key, label]) => (
+                        <div key={key} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
+                          <span className="text-xs text-foreground">{label}</span>
+                          <ToggleSwitch
+                            checked={perms.actions[key] ?? false}
+                            onChange={() => updateUserPerms(user.id, { ...perms, actions: { ...perms.actions, [key]: !perms.actions[key] } })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${user.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {user.role === "admin" ? "Admin" : "Vendedor"}
-                </span>
-                <ToggleSwitch checked={user.active} onChange={() => updateConfig({ users: config.users.map(u => u.id === user.id ? { ...u, active: !u.active } : u) })} />
-                <button onClick={() => updateConfig({ users: config.users.filter(u => u.id !== user.id) })} className="p-1 rounded hover:bg-destructive/10"><Trash2 size={12} className="text-destructive" /></button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {adding && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -418,19 +715,16 @@ function InsurersSection({ config, updateConfig }: { config: CrmConfig; updateCo
   return (
     <>
       <SectionHeader title="Aseguradoras" description="Catálogo de aseguradoras con comisiones y datos de contacto." />
-
-      <ConfigCard title="Catálogo de aseguradoras" description="Cada lead puede seleccionar una aseguradora de esta lista. La comisión se calcula automáticamente." onAdd={() => setAdding(true)}>
+      <ConfigCard title="Catálogo de aseguradoras" description="Cada lead puede seleccionar una aseguradora de esta lista." onAdd={() => setAdding(true)}>
         <div className="space-y-2">
           {config.insuranceCompanies.map((ins) => {
             const isEditing = editingId === ins.id;
             return (
               <div key={ins.id} className="rounded-lg border border-border bg-muted/30 p-3">
                 {isEditing ? (
-                  <InsuranceEditForm
-                    insurer={ins}
+                  <InsuranceEditForm insurer={ins}
                     onSave={(updated) => { updateConfig({ insuranceCompanies: config.insuranceCompanies.map(i => i.id === ins.id ? updated : i) }); setEditingId(null); }}
-                    onCancel={() => setEditingId(null)}
-                  />
+                    onCancel={() => setEditingId(null)} />
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -455,10 +749,8 @@ function InsurersSection({ config, updateConfig }: { config: CrmConfig; updateCo
           {adding && (
             <InsuranceEditForm
               insurer={{ id: "", name: newInsurer.name, commission: newInsurer.commission, contact: newInsurer.contact, notes: newInsurer.notes }}
-              onSave={(ins) => { updateConfig({ insuranceCompanies: [...config.insuranceCompanies, { ...ins, id: Date.now().toString() }] }); setAdding(false); setNewInsurer({ name: "", commission: 0, contact: "", notes: "" }); }}
-              onCancel={() => setAdding(false)}
-              isNew
-            />
+              onSave={(ins) => { updateConfig({ insuranceCompanies: [...config.insuranceCompanies, { ...ins, id: Date.now().toString() }] }); setAdding(false); }}
+              onCancel={() => setAdding(false)} isNew />
           )}
         </div>
       </ConfigCard>
@@ -591,10 +883,14 @@ function AutomationsSection({ config, updateConfig }: { config: CrmConfig; updat
     <>
       <SectionHeader title="Automatizaciones" description="Define reglas automáticas: Trigger → Acción." />
 
-      <ConfigCard title="Reglas activas" description="Cuando se cumple un trigger, la acción se ejecuta automáticamente." onAdd={() => setAdding(true)}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs text-muted-foreground">{config.automationRules.filter(r => r.enabled).length} activas de {config.automationRules.length} reglas</span>
+      </div>
+
+      <ConfigCard title="Reglas" description="Cuando se cumple un trigger, la acción se ejecuta automáticamente." onAdd={() => setAdding(true)}>
         <div className="space-y-2">
           {config.automationRules.map((rule) => (
-            <div key={rule.id} className="rounded-lg border border-border bg-muted/30 p-3">
+            <div key={rule.id} className={`rounded-lg border p-3 transition-colors ${rule.enabled ? "border-border bg-muted/30" : "border-border/50 bg-muted/10 opacity-60"}`}>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-foreground">{rule.name}</p>
                 <div className="flex items-center gap-2">
@@ -602,12 +898,15 @@ function AutomationsSection({ config, updateConfig }: { config: CrmConfig; updat
                   <button onClick={() => updateConfig({ automationRules: config.automationRules.filter(r => r.id !== rule.id) })} className="p-1 rounded hover:bg-destructive/10"><Trash2 size={12} className="text-destructive" /></button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">⚡ {triggerLabels[rule.trigger.type]}</span>
-                {rule.trigger.toStatus && <span className="text-muted-foreground">→ {rule.trigger.toStatus}</span>}
+                {rule.trigger.toStatus && <span className="text-muted-foreground">→ {config.pipelineStages.find(s => s.key === rule.trigger.toStatus)?.label || rule.trigger.toStatus}</span>}
                 {rule.trigger.daysInactive && <span className="text-muted-foreground">({rule.trigger.daysInactive} días)</span>}
                 <span className="text-muted-foreground">→</span>
                 <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">🎯 {actionLabels[rule.action.type]}</span>
+                {rule.action.activityText && <span className="text-muted-foreground italic truncate max-w-[200px]">"{rule.action.activityText}"</span>}
+                {rule.action.targetStatus && <span className="text-muted-foreground">→ {config.pipelineStages.find(s => s.key === rule.action.targetStatus)?.label || rule.action.targetStatus}</span>}
+                {rule.action.alertMessage && <span className="text-muted-foreground italic truncate max-w-[200px]">"{rule.action.alertMessage}"</span>}
               </div>
             </div>
           ))}
@@ -649,6 +948,9 @@ function AutomationsSection({ config, updateConfig }: { config: CrmConfig; updat
                   {config.pipelineStages.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
               )}
+              {newRule.action?.type === "send_alert" && (
+                <input value={newRule.action?.alertMessage || ""} onChange={e => setNewRule({ ...newRule, action: { ...newRule.action!, alertMessage: e.target.value } })} placeholder="Mensaje de alerta" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+              )}
               <div className="flex gap-2">
                 <button onClick={() => {
                   if (newRule.name?.trim()) {
@@ -681,17 +983,19 @@ function SectionHeader({ title, description }: { title: string; description: str
 function ConfigCard({ title, description, children, onAdd }: { title: string; description: string; children: React.ReactNode; onAdd?: () => void }) {
   return (
     <div className="bg-card border border-border rounded-xl p-5">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      {(title || description) && (
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            {title && <h3 className="text-sm font-semibold text-foreground">{title}</h3>}
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+          </div>
+          {onAdd && (
+            <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
+              <Plus size={12} /> Agregar
+            </button>
+          )}
         </div>
-        {onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
-            <Plus size={12} /> Agregar
-          </button>
-        )}
-      </div>
+      )}
       {children}
     </div>
   );
@@ -699,7 +1003,7 @@ function ConfigCard({ title, description, children, onAdd }: { title: string; de
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
-    <button onClick={onChange} className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-primary" : "bg-muted"}`}>
+    <button onClick={(e) => { e.stopPropagation(); onChange(); }} className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-primary" : "bg-muted"}`}>
       <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-card shadow-sm transition-transform ${checked ? "left-5" : "left-0.5"}`} />
     </button>
   );
