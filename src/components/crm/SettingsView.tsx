@@ -114,6 +114,8 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
           {activeSection === "origins" && <OriginsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "payments" && <PaymentsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "automations" && <AutomationsSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "smartviews" && <SmartViewsSettingsSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "checklist" && <ChecklistSection config={config} updateConfig={updateConfig} />}
         </div>
       </div>
     </div>
