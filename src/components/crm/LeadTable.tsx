@@ -20,7 +20,7 @@ export function LeadTable({
   leads, onSelectLead, selectedLeadId,
   locationFilter, onLocationFilterChange,
   assignedFilter, onAssignedFilterChange,
-  statusLabels = {}, onRedistributeLeads, config,
+  statusLabels = {}, onRedistributeLeads, config, compact,
 }: LeadTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRedistribute, setShowRedistribute] = useState(false);

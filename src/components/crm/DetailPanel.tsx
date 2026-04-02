@@ -22,6 +22,7 @@ interface DetailPanelProps {
   onUpdateLead: (lead: Lead) => void;
   onCreateLeadFromOpportunity?: (parentLead: Lead, opportunity: any) => void;
   config: CrmConfig;
+  expanded?: boolean;
 }
 
 const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: string; label: string }> = {
