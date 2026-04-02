@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Settings, Table2, LayoutGrid, BarChart3, CalendarDays,
   Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2, Check,
-  Shield, FileText, Users, Zap, Tag, MapPin, CreditCard, ChevronRight, Eye,
+  Shield, FileText, Users, Zap, Tag, MapPin, CreditCard, ChevronRight,
   Building2, Palette, Image, Save, ChevronDown, ChevronUp, Globe, Lock, Mail as MailIcon,
 } from "lucide-react";
 import type {
