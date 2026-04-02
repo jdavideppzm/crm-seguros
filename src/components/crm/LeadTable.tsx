@@ -111,9 +111,11 @@ export function LeadTable({
                 className={`border-b border-border/60 cursor-pointer transition-colors duration-100 ${
                   selectedLeadId === lead.id ? "bg-primary/[0.04]" : selectedIds.has(lead.id) ? "bg-accent/50" : "hover:bg-muted/60"
                 }`}>
-                <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} className="w-3.5 h-3.5 rounded border-border" />
-                </td>
+                {!compact && (
+                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} className="w-3.5 h-3.5 rounded border-border" />
+                  </td>
+                )}
                 <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}>
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-semibold text-primary shrink-0">
@@ -125,18 +127,18 @@ export function LeadTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2.5 text-muted-foreground" onClick={() => onSelectLead(lead)}>{lead.lugar}</td>
-                <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipPoliza || lead.tipoSeguro}</td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.insurance}</td>
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground" onClick={() => onSelectLead(lead)}>{lead.lugar}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipPoliza || lead.tipoSeguro}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.insurance}</td>}
                 <td className="px-3 py-2.5 text-right font-mono text-foreground font-medium" onClick={() => onSelectLead(lead)}>{formatMonto(lead.monto)}</td>
                 <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}><StatusBadge status={lead.state} labelOverrides={statusLabels} pipelineStages={config?.pipelineStages} /></td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.assignedTo || "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs truncate max-w-[160px]" onClick={() => onSelectLead(lead)}>{lead.remark || "—"}</td>
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.assignedTo || "—"}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs truncate max-w-[160px]" onClick={() => onSelectLead(lead)}>{lead.remark || "—"}</td>}
               </tr>
             ))}
             {leads.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-6 py-16 text-center text-muted-foreground">
+                <td colSpan={compact ? 3 : 9} className="px-6 py-16 text-center text-muted-foreground">
                   No se encontraron leads con los filtros actuales.
                 </td>
               </tr>
