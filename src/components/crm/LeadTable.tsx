@@ -90,17 +90,19 @@ export function LeadTable({
         <table className="w-full text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="bg-secondary/80 backdrop-blur-sm">
-              <th className="w-10 px-3 py-2.5">
-                <input type="checkbox" checked={selectedIds.size === leads.length && leads.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded border-border" />
-              </th>
+              {!compact && (
+                <th className="w-10 px-3 py-2.5">
+                  <input type="checkbox" checked={selectedIds.size === leads.length && leads.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded border-border" />
+                </th>
+              )}
               <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[220px]">Propietario</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[100px]">Ciudad</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Tipo</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Aseguradora</th>
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[100px]">Ciudad</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Tipo</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Aseguradora</th>}
               <th className="text-right font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Val. Asegurado</th>
               <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[110px]">Estado</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Asignado</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5">Observación</th>
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Asignado</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5">Observación</th>}
             </tr>
           </thead>
           <tbody>
