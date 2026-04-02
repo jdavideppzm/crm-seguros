@@ -352,6 +352,11 @@ export interface InsuranceCompany {
   commission: number;
   contact?: string;
   notes?: string;
+  webUrl?: string;
+  accessEmail?: string;
+  accessUser?: string;
+  accessPassword?: string;
+  directContact?: string;
 }
 
 export const DEFAULT_INSURANCE_COMPANIES: InsuranceCompany[] = [
