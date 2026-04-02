@@ -8,12 +8,13 @@ import {
 import type {
   CrmConfig, PaymentStatusConfig, IdTypeConfig, CustomReportSection,
   PipelineStageConfig, LeadFormFieldConfig, InsuranceCompany, PolicyType,
-  LeadOrigin, AutomationRule, CrmUser, UserPermissions,
+  LeadOrigin, AutomationRule, CrmUser, UserPermissions, EmissionCheckItem, SmartView,
 } from "@/types/crm";
 import {
   DEFAULT_USER_PERMISSIONS, ADMIN_PERMISSIONS,
   SECTION_LABELS, ACTION_LABELS, THEME_PRESETS,
 } from "@/types/crm";
+import { SmartViewsSettings } from "./SmartViewsPanel";
 
 interface SettingsViewProps {
   config: CrmConfig;
