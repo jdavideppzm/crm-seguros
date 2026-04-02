@@ -796,7 +796,16 @@ function InsuranceEditForm({ insurer, onSave, onCancel, isNew }: { insurer: Insu
         <input type="number" value={form.commission} onChange={e => setForm({ ...form, commission: Number(e.target.value) })} placeholder="Comisión %" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md font-mono" />
       </div>
       <input value={form.contact || ""} onChange={e => setForm({ ...form, contact: e.target.value })} placeholder="Contacto (email/teléfono)" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
-      <input value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Observaciones" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      <div className="grid grid-cols-2 gap-2">
+        <input value={form.webUrl || ""} onChange={e => setForm({ ...form, webUrl: e.target.value })} placeholder="Página web" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+        <input value={form.directContact || ""} onChange={e => setForm({ ...form, directContact: e.target.value })} placeholder="Contacto directo" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input value={form.accessEmail || ""} onChange={e => setForm({ ...form, accessEmail: e.target.value })} placeholder="Correo de acceso" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+        <input value={form.accessUser || ""} onChange={e => setForm({ ...form, accessUser: e.target.value })} placeholder="Usuario acceso" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      </div>
+      <input value={form.accessPassword || ""} onChange={e => setForm({ ...form, accessPassword: e.target.value })} placeholder="Contraseña" type="password" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      <input value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Notas internas" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
       <div className="flex gap-2">
         <button onClick={() => { if (form.name.trim()) onSave(form); }} disabled={!form.name.trim()} className="flex-1 text-xs py-1.5 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-40">{isNew ? "Crear" : "Guardar"}</button>
         <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-md border border-border text-muted-foreground">Cancelar</button>
