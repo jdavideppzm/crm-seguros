@@ -13,6 +13,8 @@ import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
 import { ActivityItem } from "./ActivityItem";
 import { OpportunitiesSection } from "./OpportunitiesSection";
+import { TasksSection } from "./TasksSection";
+import { EmissionChecklist } from "./EmissionChecklist";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
