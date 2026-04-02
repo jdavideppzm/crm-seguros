@@ -20,7 +20,7 @@ interface SettingsViewProps {
   onUpdateConfig: (config: CrmConfig) => void;
 }
 
-type SettingsSection = "general" | "company" | "customization" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations";
+type SettingsSection = "general" | "company" | "customization" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations" | "smartviews" | "checklist";
 
 const SETTINGS_SECTIONS: { key: SettingsSection; label: string; icon: typeof Settings; description: string }[] = [
   { key: "general", label: "General", icon: Settings, description: "Vistas, formularios y documentos" },
@@ -33,6 +33,8 @@ const SETTINGS_SECTIONS: { key: SettingsSection; label: string; icon: typeof Set
   { key: "origins", label: "Origen de leads", icon: MapPin, description: "Cómo llegan los clientes" },
   { key: "payments", label: "Estados de pago", icon: CreditCard, description: "Semáforo de cobros" },
   { key: "automations", label: "Automatizaciones", icon: Zap, description: "Reglas trigger → acción" },
+  { key: "smartviews", label: "Smart Views", icon: Eye, description: "Vistas guardadas personalizadas" },
+  { key: "checklist", label: "Checklist emisión", icon: Check, description: "Ítems de cierre de venta" },
 ];
 
 const VIEW_LIST = [
