@@ -37,7 +37,7 @@ const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: strin
   automation: { icon: ActivityIcon, color: "text-amber-500", label: "Automatización" },
 };
 
-export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config }: DetailPanelProps) {
+export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config, expanded }: DetailPanelProps) {
   const [newNote, setNewNote] = useState("");
   const [editState, setEditState] = useState<PipelineStatus | null>(null);
   const [editAssigned, setEditAssigned] = useState("");
