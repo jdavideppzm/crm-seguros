@@ -13,6 +13,7 @@ interface LeadTableProps {
   statusLabels?: Record<string, string>;
   onRedistributeLeads?: (leadIds: string[], user: string) => void;
   config?: CrmConfig;
+  compact?: boolean;
 }
 
 export function LeadTable({
