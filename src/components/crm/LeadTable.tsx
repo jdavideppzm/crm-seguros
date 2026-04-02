@@ -13,13 +13,14 @@ interface LeadTableProps {
   statusLabels?: Record<string, string>;
   onRedistributeLeads?: (leadIds: string[], user: string) => void;
   config?: CrmConfig;
+  compact?: boolean;
 }
 
 export function LeadTable({
   leads, onSelectLead, selectedLeadId,
   locationFilter, onLocationFilterChange,
   assignedFilter, onAssignedFilterChange,
-  statusLabels = {}, onRedistributeLeads, config,
+  statusLabels = {}, onRedistributeLeads, config, compact,
 }: LeadTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRedistribute, setShowRedistribute] = useState(false);
@@ -89,17 +90,19 @@ export function LeadTable({
         <table className="w-full text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="bg-secondary/80 backdrop-blur-sm">
-              <th className="w-10 px-3 py-2.5">
-                <input type="checkbox" checked={selectedIds.size === leads.length && leads.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded border-border" />
-              </th>
+              {!compact && (
+                <th className="w-10 px-3 py-2.5">
+                  <input type="checkbox" checked={selectedIds.size === leads.length && leads.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded border-border" />
+                </th>
+              )}
               <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[220px]">Propietario</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[100px]">Ciudad</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Tipo</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Aseguradora</th>
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[100px]">Ciudad</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Tipo</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Aseguradora</th>}
               <th className="text-right font-medium text-muted-foreground px-3 py-2.5 w-[120px]">Val. Asegurado</th>
               <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[110px]">Estado</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Asignado</th>
-              <th className="text-left font-medium text-muted-foreground px-3 py-2.5">Observación</th>
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5 w-[90px]">Asignado</th>}
+              {!compact && <th className="text-left font-medium text-muted-foreground px-3 py-2.5">Observación</th>}
             </tr>
           </thead>
           <tbody>
@@ -108,9 +111,11 @@ export function LeadTable({
                 className={`border-b border-border/60 cursor-pointer transition-colors duration-100 ${
                   selectedLeadId === lead.id ? "bg-primary/[0.04]" : selectedIds.has(lead.id) ? "bg-accent/50" : "hover:bg-muted/60"
                 }`}>
-                <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} className="w-3.5 h-3.5 rounded border-border" />
-                </td>
+                {!compact && (
+                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} className="w-3.5 h-3.5 rounded border-border" />
+                  </td>
+                )}
                 <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}>
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-semibold text-primary shrink-0">
@@ -122,18 +127,18 @@ export function LeadTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2.5 text-muted-foreground" onClick={() => onSelectLead(lead)}>{lead.lugar}</td>
-                <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipPoliza || lead.tipoSeguro}</td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.insurance}</td>
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground" onClick={() => onSelectLead(lead)}>{lead.lugar}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground capitalize text-xs" onClick={() => onSelectLead(lead)}>{lead.tipPoliza || lead.tipoSeguro}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.insurance}</td>}
                 <td className="px-3 py-2.5 text-right font-mono text-foreground font-medium" onClick={() => onSelectLead(lead)}>{formatMonto(lead.monto)}</td>
                 <td className="px-3 py-2.5" onClick={() => onSelectLead(lead)}><StatusBadge status={lead.state} labelOverrides={statusLabels} pipelineStages={config?.pipelineStages} /></td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.assignedTo || "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground text-xs truncate max-w-[160px]" onClick={() => onSelectLead(lead)}>{lead.remark || "—"}</td>
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs" onClick={() => onSelectLead(lead)}>{lead.assignedTo || "—"}</td>}
+                {!compact && <td className="px-3 py-2.5 text-muted-foreground text-xs truncate max-w-[160px]" onClick={() => onSelectLead(lead)}>{lead.remark || "—"}</td>}
               </tr>
             ))}
             {leads.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-6 py-16 text-center text-muted-foreground">
+                <td colSpan={compact ? 3 : 9} className="px-6 py-16 text-center text-muted-foreground">
                   No se encontraron leads con los filtros actuales.
                 </td>
               </tr>

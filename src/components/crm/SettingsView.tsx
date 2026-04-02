@@ -3,24 +3,25 @@ import {
   Settings, Table2, LayoutGrid, BarChart3, CalendarDays,
   Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2, Check,
   Shield, FileText, Users, Zap, Tag, MapPin, CreditCard, ChevronRight,
-  Building2, Palette, Image, Save, ChevronDown, ChevronUp,
+  Building2, Palette, Image, Save, ChevronDown, ChevronUp, Globe, Lock, Mail as MailIcon,
 } from "lucide-react";
 import type {
   CrmConfig, PaymentStatusConfig, IdTypeConfig, CustomReportSection,
   PipelineStageConfig, LeadFormFieldConfig, InsuranceCompany, PolicyType,
-  LeadOrigin, AutomationRule, CrmUser, UserPermissions,
+  LeadOrigin, AutomationRule, CrmUser, UserPermissions, EmissionCheckItem, SmartView,
 } from "@/types/crm";
 import {
   DEFAULT_USER_PERMISSIONS, ADMIN_PERMISSIONS,
   SECTION_LABELS, ACTION_LABELS, THEME_PRESETS,
 } from "@/types/crm";
+import { SmartViewsSettings } from "./SmartViewsPanel";
 
 interface SettingsViewProps {
   config: CrmConfig;
   onUpdateConfig: (config: CrmConfig) => void;
 }
 
-type SettingsSection = "general" | "company" | "customization" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations";
+type SettingsSection = "general" | "company" | "customization" | "users" | "pipeline" | "insurers" | "policies" | "origins" | "payments" | "automations" | "smartviews" | "checklist";
 
 const SETTINGS_SECTIONS: { key: SettingsSection; label: string; icon: typeof Settings; description: string }[] = [
   { key: "general", label: "General", icon: Settings, description: "Vistas, formularios y documentos" },
@@ -33,6 +34,8 @@ const SETTINGS_SECTIONS: { key: SettingsSection; label: string; icon: typeof Set
   { key: "origins", label: "Origen de leads", icon: MapPin, description: "Cómo llegan los clientes" },
   { key: "payments", label: "Estados de pago", icon: CreditCard, description: "Semáforo de cobros" },
   { key: "automations", label: "Automatizaciones", icon: Zap, description: "Reglas trigger → acción" },
+  { key: "smartviews", label: "Smart Views", icon: Eye, description: "Vistas guardadas personalizadas" },
+  { key: "checklist", label: "Checklist emisión", icon: Check, description: "Ítems de cierre de venta" },
 ];
 
 const VIEW_LIST = [
@@ -111,6 +114,32 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
           {activeSection === "origins" && <OriginsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "payments" && <PaymentsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "automations" && <AutomationsSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "smartviews" && (
+            <>
+              <SectionHeader title="Smart Views" description="Crea vistas filtradas personalizadas que aparecen en el sidebar." />
+              <ConfigCard title="Vistas guardadas" description="Filtra leads por estado, responsable o campo específico.">
+                <SmartViewsSettings smartViews={config.smartViews} onUpdate={(views) => updateConfig({ smartViews: views })} pipelineStages={config.pipelineStages} />
+              </ConfigCard>
+            </>
+          )}
+          {activeSection === "checklist" && (
+            <>
+              <SectionHeader title="Checklist de Emisión" description="Define los ítems que deben completarse antes de cerrar una venta." />
+              <ConfigCard title="Ítems del checklist" description="Aparecen en el detalle del lead cuando está en etapa de emisión." onAdd={() => {
+                const name = prompt("Nombre del ítem:");
+                if (name?.trim()) updateConfig({ emissionChecklist: [...config.emissionChecklist, { id: Date.now().toString(), label: name.trim() }] });
+              }}>
+                <div className="space-y-2">
+                  {config.emissionChecklist.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-2"><Check size={13} className="text-primary" /><span className="text-sm text-foreground">{item.label}</span></div>
+                      <button onClick={() => updateConfig({ emissionChecklist: config.emissionChecklist.filter(i => i.id !== item.id) })} className="p-1 rounded hover:bg-destructive/10"><Trash2 size={12} className="text-destructive" /></button>
+                    </div>
+                  ))}
+                </div>
+              </ConfigCard>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -767,7 +796,16 @@ function InsuranceEditForm({ insurer, onSave, onCancel, isNew }: { insurer: Insu
         <input type="number" value={form.commission} onChange={e => setForm({ ...form, commission: Number(e.target.value) })} placeholder="Comisión %" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md font-mono" />
       </div>
       <input value={form.contact || ""} onChange={e => setForm({ ...form, contact: e.target.value })} placeholder="Contacto (email/teléfono)" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
-      <input value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Observaciones" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      <div className="grid grid-cols-2 gap-2">
+        <input value={form.webUrl || ""} onChange={e => setForm({ ...form, webUrl: e.target.value })} placeholder="Página web" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+        <input value={form.directContact || ""} onChange={e => setForm({ ...form, directContact: e.target.value })} placeholder="Contacto directo" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input value={form.accessEmail || ""} onChange={e => setForm({ ...form, accessEmail: e.target.value })} placeholder="Correo de acceso" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+        <input value={form.accessUser || ""} onChange={e => setForm({ ...form, accessUser: e.target.value })} placeholder="Usuario acceso" className="text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      </div>
+      <input value={form.accessPassword || ""} onChange={e => setForm({ ...form, accessPassword: e.target.value })} placeholder="Contraseña" type="password" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
+      <input value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Notas internas" className="w-full text-xs py-1.5 px-2 bg-background border border-border rounded-md" />
       <div className="flex gap-2">
         <button onClick={() => { if (form.name.trim()) onSave(form); }} disabled={!form.name.trim()} className="flex-1 text-xs py-1.5 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-40">{isNew ? "Crear" : "Guardar"}</button>
         <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-md border border-border text-muted-foreground">Cancelar</button>

@@ -102,6 +102,14 @@ export function ReportsView({ leads, config, customSections = [], paymentStatuse
               </div>
             );
           })}
+          {/* TOTAL GENERAL */}
+          <div className="flex items-center justify-between py-2.5 mt-1 border-t-2 border-primary/20">
+            <span className="text-sm font-bold text-foreground">TOTAL GENERAL</span>
+            <div className="text-right">
+              <span className="font-mono text-sm font-bold text-primary">{formatMonto(totalMonto)}</span>
+              {totalPrima > 0 && <p className="text-[10px] text-muted-foreground font-mono font-bold">Prima: {formatMonto(totalPrima)}</p>}
+            </div>
+          </div>
         </ReportCard>
 
         {/* By Seller */}

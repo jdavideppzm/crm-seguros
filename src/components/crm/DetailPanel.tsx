@@ -13,6 +13,8 @@ import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
 import { ActivityItem } from "./ActivityItem";
 import { OpportunitiesSection } from "./OpportunitiesSection";
+import { TasksSection } from "./TasksSection";
+import { EmissionChecklist } from "./EmissionChecklist";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -22,6 +24,7 @@ interface DetailPanelProps {
   onUpdateLead: (lead: Lead) => void;
   onCreateLeadFromOpportunity?: (parentLead: Lead, opportunity: any) => void;
   config: CrmConfig;
+  expanded?: boolean;
 }
 
 const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: string; label: string }> = {
@@ -36,7 +39,7 @@ const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: strin
   automation: { icon: ActivityIcon, color: "text-amber-500", label: "Automatización" },
 };
 
-export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config }: DetailPanelProps) {
+export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config, expanded }: DetailPanelProps) {
   const [newNote, setNewNote] = useState("");
   const [editState, setEditState] = useState<PipelineStatus | null>(null);
   const [editAssigned, setEditAssigned] = useState("");
@@ -160,7 +163,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     <AnimatePresence>
       {lead && (
         <motion.div key="detail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={transition} onAnimationComplete={() => handleOpen()}
-          className="w-[700px] shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden">
+          className={`${expanded ? "flex-1" : "w-[700px]"} shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden`}>
 
           {/* Top Header */}
           <div className="border-b border-border bg-card sticky top-0 z-10">
@@ -384,6 +387,14 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
               </CollapsibleSection>
 
               <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} onCreateLeadFromOpportunity={onCreateLeadFromOpportunity} />
+
+              {/* Tasks Section */}
+              <TasksSection lead={lead} onUpdateLead={onUpdateLead} users={config.users} />
+
+              {/* Emission Checklist - show when in "emitido" stage or final stages */}
+              {config.pipelineStages.some(s => (s.key === lead.state && s.order >= 4) || (s.key === lead.state && s.isFinal)) && (
+                <EmissionChecklist lead={lead} checklistItems={config.emissionChecklist} onUpdateLead={onUpdateLead} />
+              )}
             </div>
 
             {/* RIGHT: Activity Timeline */}

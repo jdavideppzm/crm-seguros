@@ -1,13 +1,15 @@
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, MessageSquare } from "lucide-react";
 
 interface CrmHeaderProps {
   title: string;
   subtitle?: string;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  onToggleChat?: () => void;
+  showChatButton?: boolean;
 }
 
-export function CrmHeader({ title, subtitle, searchQuery, onSearchChange }: CrmHeaderProps) {
+export function CrmHeader({ title, subtitle, searchQuery, onSearchChange, onToggleChat, showChatButton }: CrmHeaderProps) {
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
       <div>
@@ -25,6 +27,11 @@ export function CrmHeader({ title, subtitle, searchQuery, onSearchChange }: CrmH
             className="w-56 pl-9 pr-3 py-2 text-sm bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-primary placeholder:text-muted-foreground"
           />
         </div>
+        {showChatButton && (
+          <button onClick={onToggleChat} className="relative p-2 rounded-lg hover:bg-secondary transition-colors" title="Chat interno">
+            <MessageSquare size={16} className="text-muted-foreground" />
+          </button>
+        )}
         <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">
           <Bell size={16} className="text-muted-foreground" />
         </button>
