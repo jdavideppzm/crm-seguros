@@ -60,7 +60,80 @@ export interface Lead {
   tipPoliza?: string;
   aseguradoraId?: string;
   comisionCalculada?: number;
+  // Tasks & Checklist
+  tasks?: LeadTask[];
+  emissionChecklist?: Record<string, boolean>;
 }
+
+// === Lead Tasks ===
+export interface LeadTask {
+  id: string;
+  name: string;
+  priority: "alta" | "media" | "baja";
+  date: string;
+  time: string;
+  assignedTo: string;
+  completed: boolean;
+  createdAt: string;
+}
+
+// === Smart Views ===
+export interface SmartView {
+  id: string;
+  name: string;
+  icon: string;
+  filterType: "status" | "assigned" | "field";
+  filterValue: string;
+  filterField?: string;
+}
+
+// === Chat Messages ===
+export interface ChatMessage {
+  id: string;
+  from: string;
+  to?: string;
+  text: string;
+  leadId?: string;
+  leadName?: string;
+  createdAt: string;
+}
+
+// === CRM Alerts ===
+export interface CrmAlert {
+  id: string;
+  type: "overdue" | "automation" | "manual" | "task";
+  message: string;
+  leadId?: string;
+  leadName?: string;
+  createdBy?: string;
+  createdAt: string;
+  dismissed: boolean;
+}
+
+// === Emission Checklist ===
+export interface EmissionCheckItem {
+  id: string;
+  label: string;
+}
+
+export const DEFAULT_EMISSION_CHECKLIST: EmissionCheckItem[] = [
+  { id: "ec1", label: "Cotización seleccionada" },
+  { id: "ec2", label: "Inspección realizada" },
+  { id: "ec3", label: "Forma de pago definida" },
+  { id: "ec4", label: "Tomador adicional verificado" },
+  { id: "ec5", label: "Segundo asegurado verificado" },
+  { id: "ec6", label: "Beneficiario oneroso registrado" },
+  { id: "ec7", label: "Documentos completos" },
+];
+
+export const DEFAULT_SMART_VIEWS: SmartView[] = [
+  { id: "sv1", name: "Hacer contacto inicial", icon: "🔥", filterType: "status", filterValue: "nuevo" },
+  { id: "sv2", name: "Recolectar documentos", icon: "📄", filterType: "status", filterValue: "contactado" },
+  { id: "sv3", name: "Confirmar inspección", icon: "🔍", filterType: "status", filterValue: "cotizacion" },
+  { id: "sv4", name: "Lograr avance", icon: "🎯", filterType: "status", filterValue: "seguimiento" },
+  { id: "sv5", name: "En emisión", icon: "📦", filterType: "status", filterValue: "emitido" },
+  { id: "sv6", name: "Gestionar a futuro", icon: "🚀", filterType: "status", filterValue: "ganado" },
+];
 
 export interface ContactEntry {
   value: string;
