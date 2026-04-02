@@ -163,7 +163,7 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     <AnimatePresence>
       {lead && (
         <motion.div key="detail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={transition} onAnimationComplete={() => handleOpen()}
-          className="w-[700px] shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden">
+          className={`${expanded ? "flex-1" : "w-[700px]"} shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden`}>
 
           {/* Top Header */}
           <div className="border-b border-border bg-card sticky top-0 z-10">
