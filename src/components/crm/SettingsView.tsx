@@ -114,8 +114,32 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
           {activeSection === "origins" && <OriginsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "payments" && <PaymentsSection config={config} updateConfig={updateConfig} />}
           {activeSection === "automations" && <AutomationsSection config={config} updateConfig={updateConfig} />}
-          {activeSection === "smartviews" && <SmartViewsSettingsSection config={config} updateConfig={updateConfig} />}
-          {activeSection === "checklist" && <ChecklistSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "smartviews" && (
+            <>
+              <SectionHeader title="Smart Views" description="Crea vistas filtradas personalizadas que aparecen en el sidebar." />
+              <ConfigCard title="Vistas guardadas" description="Filtra leads por estado, responsable o campo específico.">
+                <SmartViewsSettings smartViews={config.smartViews} onUpdate={(views) => updateConfig({ smartViews: views })} pipelineStages={config.pipelineStages} />
+              </ConfigCard>
+            </>
+          )}
+          {activeSection === "checklist" && (
+            <>
+              <SectionHeader title="Checklist de Emisión" description="Define los ítems que deben completarse antes de cerrar una venta." />
+              <ConfigCard title="Ítems del checklist" description="Aparecen en el detalle del lead cuando está en etapa de emisión." onAdd={() => {
+                const name = prompt("Nombre del ítem:");
+                if (name?.trim()) updateConfig({ emissionChecklist: [...config.emissionChecklist, { id: Date.now().toString(), label: name.trim() }] });
+              }}>
+                <div className="space-y-2">
+                  {config.emissionChecklist.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-2"><Check size={13} className="text-primary" /><span className="text-sm text-foreground">{item.label}</span></div>
+                      <button onClick={() => updateConfig({ emissionChecklist: config.emissionChecklist.filter(i => i.id !== item.id) })} className="p-1 rounded hover:bg-destructive/10"><Trash2 size={12} className="text-destructive" /></button>
+                    </div>
+                  ))}
+                </div>
+              </ConfigCard>
+            </>
+          )}
         </div>
       </div>
     </div>
