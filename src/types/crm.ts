@@ -702,6 +702,8 @@ export interface CrmConfig {
   userPermissions: Record<string, UserPermissions>;
   themePreset: string;
   layoutConfig: LayoutConfig;
+  emissionChecklist: EmissionCheckItem[];
+  smartViews: SmartView[];
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
@@ -710,7 +712,7 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   serviceTypes: DEFAULT_SERVICE_TYPES,
   statusLabels: {},
   customReportSections: [],
-  visibleViews: { pipeline: true, kanban: true, reports: true, agenda: true },
+  visibleViews: { pipeline: true, kanban: true, reports: true, agenda: true, alerts: true },
   leadFormFields: DEFAULT_LEAD_FORM_FIELDS,
   pipelineStages: DEFAULT_PIPELINE_STAGES,
   insuranceCompanies: DEFAULT_INSURANCE_COMPANIES,
@@ -722,6 +724,8 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   userPermissions: {},
   themePreset: "default",
   layoutConfig: DEFAULT_LAYOUT_CONFIG,
+  emissionChecklist: DEFAULT_EMISSION_CHECKLIST,
+  smartViews: DEFAULT_SMART_VIEWS,
 };
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
