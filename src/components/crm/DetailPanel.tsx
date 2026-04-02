@@ -387,6 +387,14 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
               </CollapsibleSection>
 
               <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} onCreateLeadFromOpportunity={onCreateLeadFromOpportunity} />
+
+              {/* Tasks Section */}
+              <TasksSection lead={lead} onUpdateLead={onUpdateLead} users={config.users} />
+
+              {/* Emission Checklist - show when in "emitido" stage or final stages */}
+              {config.pipelineStages.some(s => (s.key === lead.state && s.order >= 4) || (s.key === lead.state && s.isFinal)) && (
+                <EmissionChecklist lead={lead} checklistItems={config.emissionChecklist} onUpdateLead={onUpdateLead} />
+              )}
             </div>
 
             {/* RIGHT: Activity Timeline */}
