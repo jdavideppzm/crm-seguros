@@ -56,7 +56,7 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
       <nav className="px-3 space-y-0.5">
         {visibleViews["pipeline"] !== false && <NavItem icon={<Table2 size={16} />} label="Pipeline" active={activeView === "pipeline"} onClick={() => onViewChange("pipeline")} />}
         {visibleViews["kanban"] !== false && <NavItem icon={<LayoutGrid size={16} />} label="Kanban" active={activeView === "kanban"} onClick={() => onViewChange("kanban")} />}
-        {visibleViews["agenda"] !== false && <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} badge={scheduledCount > 0 ? scheduledCount : undefined} />}
+        {visibleViews["agenda"] !== false && <NavItem icon={<CalendarDays size={16} />} label="Agenda" active={activeView === "agenda"} onClick={() => onViewChange("agenda")} badge={scheduledCount > 0 ? scheduledCount : undefined} />}
         {visibleViews["reports"] !== false && <NavItem icon={<BarChart3 size={16} />} label="Reportes" active={activeView === "reports"} onClick={() => onViewChange("reports")} />}
         {visibleViews["alerts"] !== false && <NavItem icon={<Bell size={16} />} label="Alertas" active={activeView === "alerts"} onClick={() => onViewChange("alerts")} badge={alertCount > 0 ? alertCount : undefined} />}
         <div className="pt-2 mt-2 border-t border-sidebar-dark-border">
