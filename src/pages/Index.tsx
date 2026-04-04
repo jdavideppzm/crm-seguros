@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Lead, PipelineStatus, Opportunity, OpportunityType, Activity, CrmConfig, CrmAlert, ChatMessage, SmartView } from "@/types/crm";
 import { SEED_LEADS } from "@/data/seedData";
 import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, getStatusLabel, getInsuranceCommission } from "@/types/crm";
