@@ -109,12 +109,19 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
       </div>
 
       <div className="mt-auto px-5 py-4 border-t border-sidebar-dark-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-sidebar-dark-active flex items-center justify-center text-[11px] font-semibold text-sidebar-dark-bright">U</div>
-          <div>
-            <p className="text-xs text-sidebar-dark-bright leading-tight">Usuario</p>
-            <p className="text-[11px] text-sidebar-dark-fg leading-tight">Sheets conectado</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-sidebar-dark-active flex items-center justify-center text-[11px] font-semibold text-sidebar-dark-bright shrink-0">
+              {displayName?.charAt(0)?.toUpperCase() || "U"}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-sidebar-dark-bright leading-tight truncate">{displayName || "Usuario"}</p>
+              <p className="text-[11px] text-sidebar-dark-fg leading-tight">{isAdmin ? "Administrador" : "Vendedor"}</p>
+            </div>
           </div>
+          <button onClick={signOut} className="p-1.5 rounded-lg hover:bg-sidebar-dark-hover transition-colors" title="Cerrar sesión">
+            <LogOut size={14} className="text-sidebar-dark-fg" />
+          </button>
         </div>
       </div>
     </aside>
