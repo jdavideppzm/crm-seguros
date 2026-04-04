@@ -2,7 +2,6 @@ import { BarChart3, CalendarDays, LayoutGrid, Table2, Settings, Plus, Bell, Eye,
 import type { PipelineStatus, PipelineStageConfig, SmartView, CompanyInfo } from "@/types/crm";
 import { DEFAULT_PIPELINE_STAGES } from "@/types/crm";
 import { useAuth } from "@/contexts/AuthContext";
-import { DEFAULT_PIPELINE_STAGES } from "@/types/crm";
 
 type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings" | "alerts";
 
