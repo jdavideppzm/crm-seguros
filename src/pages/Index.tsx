@@ -327,7 +327,7 @@ export default function Index() {
             <SettingsView config={config} onUpdateConfig={setConfig} />
           )}
           {showChat && (activeView === "pipeline" || activeView === "kanban") && (
-            <ChatPanel messages={chatMessages} currentUser="Carlos M." users={config.users}
+            <ChatPanel messages={chatMessages} currentUser={displayName || "Usuario"} users={config.users}
               leadId={selectedLead?.id} leadName={selectedLead?.propietario}
               onSendMessage={handleSendChat} onClose={() => setShowChat(false)} />
           )}
