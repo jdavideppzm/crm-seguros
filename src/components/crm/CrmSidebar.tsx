@@ -26,6 +26,7 @@ interface CrmSidebarProps {
 
 export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFilter, statusCounts, totalLeads, scheduledCount = 0, visibleViews = {}, statusLabels = {}, onCreateLead, pipelineStages, alertCount = 0, smartViews = [], activeSmartViewId, onSelectSmartView, companyInfo }: CrmSidebarProps) {
   const stages = pipelineStages || DEFAULT_PIPELINE_STAGES;
+  const { displayName, signOut, isAdmin } = useAuth();
 
   return (
     <aside className="w-56 shrink-0 bg-sidebar-dark-bg h-screen flex flex-col">
