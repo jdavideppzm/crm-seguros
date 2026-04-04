@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Lead, PipelineStatus, Opportunity, OpportunityType, Activity, CrmConfig, CrmAlert, ChatMessage, SmartView } from "@/types/crm";
 import { SEED_LEADS } from "@/data/seedData";
 import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, getStatusLabel, getInsuranceCommission } from "@/types/crm";
@@ -18,6 +19,7 @@ import { AlertPopup } from "@/components/crm/AlertPopup";
 type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings" | "alerts";
 
 export default function Index() {
+  const { displayName } = useAuth();
   const [leads, setLeads] = useState<Lead[]>(SEED_LEADS);
   const [activeView, setActiveView] = useState<ViewType>("pipeline");
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | null>(null);
@@ -325,7 +327,7 @@ export default function Index() {
             <SettingsView config={config} onUpdateConfig={setConfig} />
           )}
           {showChat && (activeView === "pipeline" || activeView === "kanban") && (
-            <ChatPanel messages={chatMessages} currentUser="Carlos M." users={config.users}
+            <ChatPanel messages={chatMessages} currentUser={displayName || "Usuario"} users={config.users}
               leadId={selectedLead?.id} leadName={selectedLead?.propietario}
               onSendMessage={handleSendChat} onClose={() => setShowChat(false)} />
           )}
