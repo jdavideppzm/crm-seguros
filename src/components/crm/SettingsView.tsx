@@ -108,7 +108,15 @@ export function SettingsView({ config, onUpdateConfig }: SettingsViewProps) {
           {activeSection === "general" && <GeneralSection config={config} updateConfig={updateConfig} />}
           {activeSection === "company" && <CompanySection config={config} updateConfig={updateConfig} />}
           {activeSection === "customization" && <CustomizationSection config={config} updateConfig={updateConfig} />}
-          {activeSection === "users" && <UsersSection config={config} updateConfig={updateConfig} />}
+          {activeSection === "users" && (
+            <>
+              <SectionHeader title="Usuarios y Permisos" description="Gestiona los usuarios del sistema, crea nuevas cuentas y asigna roles." />
+              <ConfigCard title="Gestión de usuarios" description="Crea usuarios con email y contraseña. Solo administradores pueden gestionar usuarios.">
+                <UserManagement />
+              </ConfigCard>
+              <UsersSection config={config} updateConfig={updateConfig} />
+            </>
+          )}
           {activeSection === "pipeline" && <PipelineSection config={config} updateConfig={updateConfig} />}
           {activeSection === "insurers" && <InsurersSection config={config} updateConfig={updateConfig} />}
           {activeSection === "policies" && <PoliciesSection config={config} updateConfig={updateConfig} />}
