@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { UserManagement } from "./UserManagement";
 import {
   Settings, Table2, LayoutGrid, BarChart3, CalendarDays,
   Plus, X, Eye, EyeOff, GripVertical, Pencil, Trash2, Check,
