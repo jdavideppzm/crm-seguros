@@ -19,6 +19,7 @@ import { AlertPopup } from "@/components/crm/AlertPopup";
 type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings" | "alerts";
 
 export default function Index() {
+  const { displayName } = useAuth();
   const [leads, setLeads] = useState<Lead[]>(SEED_LEADS);
   const [activeView, setActiveView] = useState<ViewType>("pipeline");
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | null>(null);
