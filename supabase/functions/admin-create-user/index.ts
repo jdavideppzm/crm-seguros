@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,23 +19,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify the caller is an admin
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const { data: { user: caller } } = await supabaseClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
+    // Verify the caller is an admin using service role to avoid RLS issues
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Verify JWT by getting user
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: "Sesión expirada. Por favor cierra sesión e ingresa de nuevo." }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if caller is admin
-    const { data: roles } = await supabaseClient
+    // Check if caller is admin using service role client (bypasses RLS)
+    const { data: roles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
@@ -59,12 +66,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Use service role to create user
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Create user with auto-confirm
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
