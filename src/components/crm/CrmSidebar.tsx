@@ -70,30 +70,40 @@ export function CrmSidebar({ activeView, onViewChange, statusFilter, onStatusFil
       </nav>
 
       <div className="px-3 mt-6 flex-1 overflow-y-auto">
-        <p className="px-3 mb-2 text-[11px] font-semibold text-sidebar-dark-fg uppercase tracking-widest">Filtros</p>
-        <button onClick={() => onStatusFilter(null)}
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[13px] transition-colors ${statusFilter === null && !activeSmartViewId ? "bg-sidebar-dark-hover text-sidebar-dark-bright" : "text-sidebar-dark-fg hover:bg-sidebar-dark-hover hover:text-sidebar-dark-bright"}`}>
-          <span>Todos</span>
-          <span className="font-mono text-[11px] opacity-60">{totalLeads}</span>
+        <button onClick={() => setFiltersOpen(!filtersOpen)}
+          className="px-3 mb-1 w-full flex items-center gap-1.5 text-[11px] font-semibold text-sidebar-dark-fg uppercase tracking-widest hover:text-sidebar-dark-bright transition-colors">
+          {filtersOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          Filtros
         </button>
-        {stages.map((stage) => (
-          <button key={stage.key} onClick={() => onStatusFilter(stage.key)}
-            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[13px] transition-colors ${statusFilter === stage.key ? "bg-sidebar-dark-hover text-sidebar-dark-bright" : "text-sidebar-dark-fg hover:bg-sidebar-dark-hover hover:text-sidebar-dark-bright"}`}>
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-              {stage.label}
-            </span>
-            <span className="font-mono text-[11px] opacity-60">{statusCounts[stage.key] || 0}</span>
-          </button>
-        ))}
+        {filtersOpen && (
+          <>
+            <button onClick={() => onStatusFilter(null)}
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[13px] transition-colors ${statusFilter === null && !activeSmartViewId ? "bg-sidebar-dark-hover text-sidebar-dark-bright" : "text-sidebar-dark-fg hover:bg-sidebar-dark-hover hover:text-sidebar-dark-bright"}`}>
+              <span>Todos</span>
+              <span className="font-mono text-[11px] opacity-60">{totalLeads}</span>
+            </button>
+            {stages.map((stage) => (
+              <button key={stage.key} onClick={() => onStatusFilter(stage.key)}
+                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[13px] transition-colors ${statusFilter === stage.key ? "bg-sidebar-dark-hover text-sidebar-dark-bright" : "text-sidebar-dark-fg hover:bg-sidebar-dark-hover hover:text-sidebar-dark-bright"}`}>
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                  {stage.label}
+                </span>
+                <span className="font-mono text-[11px] opacity-60">{statusCounts[stage.key] || 0}</span>
+              </button>
+            ))}
+          </>
+        )}
 
         {/* Smart Views */}
         {smartViews.length > 0 && (
           <div className="mt-4">
-            <p className="px-3 mb-2 text-[11px] font-semibold text-sidebar-dark-fg uppercase tracking-widest flex items-center gap-1.5">
+            <button onClick={() => setSmartViewsOpen(!smartViewsOpen)}
+              className="px-3 mb-1 w-full flex items-center gap-1.5 text-[11px] font-semibold text-sidebar-dark-fg uppercase tracking-widest hover:text-sidebar-dark-bright transition-colors">
+              {smartViewsOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
               <Eye size={10} /> Smart Views
-            </p>
-            {smartViews.map((sv) => (
+            </button>
+            {smartViewsOpen && smartViews.map((sv) => (
               <button
                 key={sv.id}
                 onClick={() => onSelectSmartView?.(activeSmartViewId === sv.id ? null : sv.id)}
