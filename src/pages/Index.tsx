@@ -54,11 +54,17 @@ export default function Index() {
 
   const alertCount = useMemo(() => alerts.filter(a => !a.dismissed).length, [alerts]);
 
-  // Alert popup timer
+  // Alert popup timer — checks both activities and tasks
   useEffect(() => {
-    const interval = setInterval(() => {
+    const checkAlerts = () => {
       const now = new Date();
+      const nowDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
+      const nowHH = now.getHours().toString().padStart(2, "0");
+      const nowMM = now.getMinutes().toString().padStart(2, "0");
+      const nowTime = `${nowHH}:${nowMM}`;
+
       leads.forEach(lead => {
+        // Check scheduled activities
         (lead.activities || []).forEach(act => {
           if (act.scheduledAt && !act.completed) {
             try {
@@ -77,8 +83,33 @@ export default function Index() {
             } catch {}
           }
         });
+
+        // Check tasks with date/time
+        (lead.tasks || []).forEach(task => {
+          if (!task.completed && task.date) {
+            const isToday = task.date === nowDate;
+            const isDue = !task.time || task.time === nowTime || (isToday && task.time <= nowTime);
+            if (isToday && isDue) {
+              // Convert task to activity-like popup
+              const priorityLabel = task.priority === "alta" ? "🔴 Alta" : task.priority === "media" ? "🟡 Media" : "🟢 Baja";
+              setPopupActivity({
+                id: task.id,
+                type: "note",
+                text: `📋 Tarea: ${task.name} (${priorityLabel})`,
+                author: task.assignedTo || "Sistema",
+                createdAt: task.createdAt,
+                scheduledAt: `${task.date}${task.time ? ` ${task.time}` : ""}`,
+                leadId: lead.id,
+                leadName: lead.propietario,
+              });
+            }
+          }
+        });
       });
-    }, 30000);
+    };
+
+    checkAlerts(); // Run immediately on mount
+    const interval = setInterval(checkAlerts, 30000);
     return () => clearInterval(interval);
   }, [leads]);
 
