@@ -48,8 +48,9 @@ export default function Setup() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-xs font-medium text-foreground block mb-1">Clave de configuración</label>
-              <input type="password" value={form.setup_key} onChange={e => setForm({ ...form, setup_key: e.target.value })}
-                placeholder="Clave proporcionada" required
+              <p className="text-xs text-muted-foreground mb-1">Ingresa exactamente: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">setup-crm-admin-2026</code></p>
+              <input type="text" value={form.setup_key} onChange={e => setForm({ ...form, setup_key: e.target.value })}
+                placeholder="setup-crm-admin-2026" required
                 className="w-full py-2.5 px-3 bg-muted/50 border border-border rounded-xl text-sm" />
             </div>
             <div>
