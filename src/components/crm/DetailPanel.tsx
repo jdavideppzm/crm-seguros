@@ -1,20 +1,20 @@
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  X, Phone, Mail, MessageSquare, Save, StickyNote, PhoneCall,
-  Activity as ActivityIcon, ChevronDown, ChevronRight, MapPin, FileText,
-  Clock, User, Car, Shield, DollarSign, Calendar, Hash, ArrowRight,
-  CreditCard, Users, UserCircle, Building2, CalendarDays, Bell,
-  Pencil, Check, Palette, Plus, Briefcase, Tag, TrendingUp,
-} from "lucide-react";
+import { X, Phone, Mail, MessageSquare, Save, Activity as ActivityIcon, Bell, Clock, User, Shield, CreditCard, ScanLine, StickyNote, FileText, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { Lead, PipelineStatus, Note, Activity, CrmConfig, ContactEntry } from "@/types/crm";
-import { getStatusLabel, YEAR_OPTIONS, getInsuranceCommission } from "@/types/crm";
+import { getStatusLabel, getInsuranceCommission } from "@/types/crm";
 import { StatusBadge } from "./StatusBadge";
 import { DocumentsView } from "./DocumentsView";
 import { ActivityItem } from "./ActivityItem";
 import { OpportunitiesSection } from "./OpportunitiesSection";
 import { TasksSection } from "./TasksSection";
 import { EmissionChecklist } from "./EmissionChecklist";
+import { ActionButton, CollapsibleSection } from "./detail/DetailShared";
+import { LeadClientFields } from "./detail/LeadClientFields";
+import { LeadVehicleFields } from "./detail/LeadVehicleFields";
+import { DocumentScanner } from "./detail/DocumentScanner";
+import { PermissionGuard } from "./PermissionGuard";
+import { getWhatsAppLink } from "@/utils/crm";
 
 const transition = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -27,18 +27,6 @@ interface DetailPanelProps {
   expanded?: boolean;
 }
 
-const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: string; label: string }> = {
-  note: { icon: StickyNote, color: "text-amber-500", label: "Nota" },
-  call: { icon: PhoneCall, color: "text-green-500", label: "Llamada" },
-  email: { icon: Mail, color: "text-cyan-500", label: "Email" },
-  whatsapp: { icon: MessageSquare, color: "text-green-500", label: "WhatsApp" },
-  status_change: { icon: ActivityIcon, color: "text-blue-500", label: "Cambio de estado" },
-  field_edit: { icon: Pencil, color: "text-violet-500", label: "Edición" },
-  doc_selected: { icon: FileText, color: "text-primary", label: "Cotización seleccionada" },
-  doc_summary: { icon: FileText, color: "text-cyan-500", label: "Resumen documento" },
-  automation: { icon: ActivityIcon, color: "text-amber-500", label: "Automatización" },
-};
-
 export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOpportunity, config, expanded }: DetailPanelProps) {
   const [newNote, setNewNote] = useState("");
   const [editState, setEditState] = useState<PipelineStatus | null>(null);
@@ -48,18 +36,13 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
   const [aboutOpen, setAboutOpen] = useState(true);
   const [clientFieldsOpen, setClientFieldsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "notes" | "calls" | "docs" | "scanner">("all");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [activityType, setActivityType] = useState<"note" | "call" | "email" | "whatsapp">("note");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editFieldValue, setEditFieldValue] = useState("");
-  const [addingPhone, setAddingPhone] = useState(false);
-  const [newPhone, setNewPhone] = useState("");
-  const [newPhoneLabel, setNewPhoneLabel] = useState("");
-  const [addingEmail, setAddingEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newEmailLabel, setNewEmailLabel] = useState("");
+
   const [selectedPhone, setSelectedPhone] = useState("");
   const [selectedEmail, setSelectedEmail] = useState("");
 
@@ -120,32 +103,38 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     onUpdateLead({ ...lead, paymentStatus: statusLabel, activities: newActivities });
   };
 
-  const handleAddPhone = () => {
-    if (!lead || !newPhone.trim()) return;
-    const entry: ContactEntry = { value: newPhone.trim(), label: newPhoneLabel.trim() || undefined };
-    const phones = [...(lead.phones || []), entry];
-    onUpdateLead({ ...lead, phones });
-    setNewPhone(""); setNewPhoneLabel(""); setAddingPhone(false);
-  };
-
-  const handleAddEmail = () => {
-    if (!lead || !newEmail.trim()) return;
-    const entry: ContactEntry = { value: newEmail.trim(), label: newEmailLabel.trim() || undefined };
-    const emails = [...(lead.emails || []), entry];
-    onUpdateLead({ ...lead, emails });
-    setNewEmail(""); setNewEmailLabel(""); setAddingEmail(false);
-  };
-
   const formatMonto = (m: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
 
+  const [showSystemOnly, setShowSystemOnly] = useState(false);
+
   const filteredActivities = (lead?.activities || []).filter((a) => {
+    if (showSystemOnly) return ["status_change", "field_edit", "automation", "doc_selected"].includes(a.type);
     if (activeTab === "all") return true;
     if (activeTab === "notes") return a.type === "note";
-    if (activeTab === "calls") return a.type === "call" || a.type === "status_change" || a.type === "field_edit" || a.type === "whatsapp" || a.type === "doc_selected" || a.type === "doc_summary" || a.type === "automation";
+    if (activeTab === "calls") return ["call", "whatsapp", "email"].includes(a.type);
     return true;
   });
 
-  const isNit = lead?.tipoIdentificacion === "NIT";
+  // Grouping logic
+  const groupActivities = (acts: Activity[]) => {
+    const groups: { [key: string]: Activity[] } = {};
+    const today = new Date().toLocaleDateString("es-CO");
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("es-CO");
+
+    acts.forEach(a => {
+      const datePart = a.createdAt.split(", ")[0];
+      let label = datePart;
+      if (datePart === today) label = "Hoy";
+      else if (datePart === yesterday) label = "Ayer";
+      
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(a);
+    });
+    return groups;
+  };
+
+  const activityGroups = groupActivities(filteredActivities);
+
   const allPhones: ContactEntry[] = lead ? [
     { value: lead.phone, label: "Principal" },
     ...(lead.phones || []),
@@ -154,70 +143,120 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
     { value: lead.email, label: "Principal" },
     ...(lead.emails || []),
   ].filter(e => e.value) : [];
+  
   const cuotaCalc = lead?.tipoPago === "Financiado" && lead.valorPrima && lead.numeroCuotas ? lead.valorPrima / lead.numeroCuotas : undefined;
   const activeUsers = config.users.filter(u => u.active);
   const commission = lead ? getInsuranceCommission(config, lead.insurance) : 0;
   const calculatedCommission = lead?.valorPrima && commission ? (lead.valorPrima * commission / 100) : 0;
+  const isNit = lead?.tipoIdentificacion === "NIT";
 
   return (
     <AnimatePresence>
       {lead && (
         <motion.div key="detail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={transition} onAnimationComplete={() => handleOpen()}
-          className={`${expanded ? "flex-1" : "w-[700px]"} shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden`}>
+          className={`${expanded ? "flex-1" : "w-[850px]"} shrink-0 border-l border-border bg-card h-full flex flex-col overflow-hidden`}>
 
           {/* Top Header */}
-          <div className="border-b border-border bg-card sticky top-0 z-10">
-            <div className="flex items-center justify-between px-5 py-2.5">
-              <button onClick={onClose} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"><X size={14} /><span>Cerrar</span></button>
-              <div className="flex items-center gap-3">
-                {lead.valorPrima ? <span className="text-xs font-mono font-bold text-primary">Prima: {formatMonto(lead.valorPrima)}</span> : null}
-                {calculatedCommission > 0 && <span className="text-[10px] font-mono text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Com: {formatMonto(calculatedCommission)} ({commission}%)</span>}
+          <div className="sticky top-0 z-30 border-b border-border/50 bg-card/60 backdrop-blur-xl">
+            <div className="flex items-center justify-between px-6 py-3">
+              <button 
+                onClick={onClose} 
+                className="group flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all duration-300"
+              >
+                <div className="p-1.5 rounded-full bg-muted/50 group-hover:bg-primary/20 group-hover:text-primary transition-all duration-300 group-hover:scale-110">
+                  <X size={13} strokeWidth={3} />
+                </div>
+                <span>Cerrar Panel</span>
+              </button>
+              <div className="flex items-center gap-4">
+                {lead.valorPrima ? (
+                  <div className="flex flex-col items-end group">
+                    <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter transition-colors group-hover:text-primary/70">Prima Total</span>
+                    <span className="text-xs font-mono font-black text-foreground group-hover:text-primary transition-colors">{formatMonto(lead.valorPrima)}</span>
+                  </div>
+                ) : null}
+                {calculatedCommission > 0 && (
+                  <div className="flex flex-col items-end pl-4 border-l border-border/50 group">
+                    <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter transition-colors group-hover:text-emerald-600/70">Comisión ({commission}%)</span>
+                    <span className="text-xs font-mono font-black text-emerald-600 group-hover:scale-105 transition-transform">{formatMonto(calculatedCommission)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="px-5 pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+            <div className="px-6 pb-6 relative overflow-hidden bg-gradient-to-b from-transparent to-muted/5">
+              {/* Decorative gradient background elements */}
+              <div className="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none animate-pulse" />
+              <div className="absolute -left-16 bottom-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[50px] pointer-events-none" />
+
+              <div className="flex items-start gap-5 relative z-10 pt-2">
+                <div className="relative group">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/40 flex items-center justify-center text-xl font-black text-white border border-primary/20 shadow-xl shadow-primary/20 transition-all duration-500 group-hover:scale-105 group-hover:rotate-3">
                     {lead.propietario.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                   </div>
-                  <div>
-                    {isNit && lead.empresaNombre ? (
-                      <>
-                        <h2 className="text-base font-semibold text-foreground leading-tight">{lead.empresaNombre}</h2>
-                        <p className="text-[11px] text-muted-foreground">Rep. Legal: {lead.representanteLegal || lead.propietario}</p>
-                      </>
-                    ) : (
-                      <h2 className="text-base font-semibold text-foreground leading-tight">{lead.propietario}</h2>
-                    )}
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <StatusBadge status={lead.state} labelOverrides={config.statusLabels} pipelineStages={config.pipelineStages} />
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"><Shield size={10} />{lead.insurance}</span>
-                        {lead.insurance && config.paymentStatuses.length > 0 && (
-                          <div className="flex items-center gap-0.5 ml-1">
-                            {config.paymentStatuses.map(ps => (
-                              <button key={ps.id} onClick={() => handlePaymentStatusChange(ps.label)} title={ps.label}
-                                className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${lead.paymentStatus === ps.label ? "border-foreground scale-125 shadow-sm" : "border-transparent opacity-40 hover:opacity-70"}`}
-                                style={{ backgroundColor: ps.color }} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                  {lead.score !== undefined && (
+                    <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-card border-4 border-background flex items-center justify-center shadow-lg">
+                       <span className={`text-[8px] font-black ${lead.score > 80 ? "text-orange-500" : lead.score > 50 ? "text-primary" : "text-slate-500"}`}>
+                         {lead.score}%
+                       </span>
                     </div>
-                    {lead.paymentStatus && (
-                      <span className="text-[10px] font-semibold mt-0.5 inline-block px-1.5 py-0.5 rounded" style={{ backgroundColor: config.paymentStatuses.find(p => p.label === lead.paymentStatus)?.color + "20", color: config.paymentStatuses.find(p => p.label === lead.paymentStatus)?.color }}>
-                        {lead.paymentStatus}
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  {isNit && lead.empresaNombre ? (
+                    <>
+                      <h2 className="text-2xl font-black text-foreground leading-tight tracking-tight mb-1">{lead.empresaNombre}</h2>
+                      <p className="text-xs font-semibold text-muted-foreground flex items-center gap-2 leading-none opacity-80 uppercase tracking-wide">
+                        <User size={12} className="text-primary" strokeWidth={2.5} /> Rep. Legal: <span className="text-foreground">{lead.representanteLegal || lead.propietario}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-3 mb-1.5">
+                      <h2 className="text-2xl font-black text-foreground leading-tight tracking-tight drop-shadow-sm">{lead.propietario}</h2>
+                      {lead.isRenewal && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-600 text-[9px] font-black uppercase tracking-[0.2em] shadow-sm animate-pulse">
+                          Renovación
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-4 mt-3">
+                    <StatusBadge status={lead.state} labelOverrides={config.statusLabels} pipelineStages={config.pipelineStages} />
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-foreground/80 flex items-center gap-2 bg-muted/50 backdrop-blur-sm px-3 py-1 rounded-xl border border-border/50 shadow-sm transition-all hover:bg-muted">
+                        <Shield size={13} className="text-primary" strokeWidth={2.5} /> {lead.insurance || "Sin aseguradora"}
                       </span>
-                    )}
-                    {lead.assignedTo && <span className="text-[11px] text-muted-foreground block">Asignado: {lead.assignedTo}</span>}
+                      {lead.insurance && config.paymentStatuses.length > 0 && (
+                        <div className="flex items-center gap-2 pl-3 border-l border-border/50">
+                          {config.paymentStatuses.map(ps => (
+                            <button key={ps.id} onClick={() => handlePaymentStatusChange(ps.label)} title={ps.label}
+                              className={`w-4 h-4 rounded-full border-2 transition-all hover:scale-125 hover:shadow-lg ${lead.paymentStatus === ps.label ? "border-foreground shadow-md ring-2 ring-background ring-offset-1 scale-110" : "border-transparent opacity-40 hover:opacity-100"}`}
+                              style={{ backgroundColor: ps.color }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {(lead.paymentStatus || lead.assignedTo) && (
+                    <div className="flex items-center gap-6 mt-4 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] opacity-80">
+                      {lead.paymentStatus && (
+                        <span className="flex items-center gap-2 group transition-colors hover:text-foreground">
+                          <CreditCard size={12} className="opacity-70 group-hover:scale-110 transition-transform" strokeWidth={2.5} /> {lead.paymentStatus}
+                        </span>
+                      )}
+                      {lead.assignedTo && (
+                        <span className="flex items-center gap-2 group transition-colors hover:text-foreground">
+                          <User size={12} className="text-primary/70 group-hover:scale-110 transition-transform" strokeWidth={2.5} /> {lead.assignedTo}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 mt-3">
-                <ActionButton icon={<StickyNote size={13} />} label="Nota" onClick={() => document.getElementById("note-input")?.focus()} />
+                <ActionButton icon={<ActivityIcon size={13} />} label="Nota" onClick={() => document.getElementById("note-input")?.focus()} />
                 <div className="relative group">
                   <ActionButton icon={<Mail size={13} />} label="Email" onClick={() => {
                     const email = selectedEmail || lead.email;
@@ -232,8 +271,8 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                 {allPhones.length > 0 && (
                   <div className="relative">
                     <ActionButton icon={<MessageSquare size={13} />} label={selectedPhone || lead.phone} onClick={() => {
-                      const phone = (selectedPhone || lead.phone).replace(/\D/g, "");
-                      window.open(`https://wa.me/${phone.startsWith("57") ? phone : "57" + phone}`, "_blank");
+                      const link = getWhatsAppLink({ ...lead, phone: selectedPhone || lead.phone });
+                      if (link) window.open(link, "_blank");
                     }} />
                     {allPhones.length > 1 && (
                       <select value={selectedPhone} onChange={e => setSelectedPhone(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-xs">
@@ -246,118 +285,24 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
             </div>
           </div>
 
-          {/* Two-column content */}
           <div className="flex-1 flex overflow-hidden">
             {/* LEFT: Details */}
-            <div className="w-[280px] shrink-0 border-r border-border overflow-y-auto">
-              <CollapsibleSection title="CONTACTO" icon={<Car size={13} />} open={aboutOpen} onToggle={() => setAboutOpen(!aboutOpen)}>
-                <div className="space-y-2.5">
-                  <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad circulación" value={lead.lugar} fieldKey="lugar" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <EditableDetailRow icon={<Car size={12} />} label="Placa" value={lead.placa || "—"} fieldKey="placa" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  {/* Insurance from config */}
-                  <DropdownDetailRow icon={<Shield size={12} />} label="Aseguradora" value={lead.insurance || "—"} options={config.insuranceCompanies.map(c => c.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Aseguradora: "${lead.insurance}" → "${v}"`, { field: "insurance", oldValue: lead.insurance, newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, insurance: v, activities: acts }); }} />
-                  {/* Policy type from config */}
-                  <DropdownDetailRow icon={<Tag size={12} />} label="Tipo de póliza" value={lead.tipPoliza || lead.tipoSeguro || "—"} options={config.policyTypes.map(p => p.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo póliza: "${lead.tipPoliza || lead.tipoSeguro || '—'}" → "${v}"`, { field: "tipPoliza", oldValue: lead.tipPoliza || lead.tipoSeguro || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipPoliza: v, tipoSeguro: v, activities: acts }); }} />
-                  {/* Origin from config */}
-                  <DropdownDetailRow icon={<TrendingUp size={12} />} label="Origen" value={lead.origenLead || "—"} options={config.leadOrigins.map(o => o.name)} onChange={(v) => { const acts = [addActivity("field_edit", `Origen: "${lead.origenLead || '—'}" → "${v}"`, { field: "origenLead", oldValue: lead.origenLead || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, origenLead: v, activities: acts }); }} />
-                  <DropdownDetailRow icon={<FileText size={12} />} label="Tipo servicio" value={lead.tipoServicio || "—"} options={config.serviceTypes} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo servicio: "${lead.tipoServicio || '—'}" → "${v}"`, { field: "tipoServicio", oldValue: lead.tipoServicio || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoServicio: v, activities: acts }); }} />
-                  <EditableDetailRow icon={<Car size={12} />} label="Marca" value={lead.marca || "—"} fieldKey="marca" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <DropdownDetailRow icon={<Calendar size={12} />} label="Modelo" value={lead.modelo || "—"} options={YEAR_OPTIONS} onChange={(v) => { const acts = [addActivity("field_edit", `Modelo: "${lead.modelo || '—'}" → "${v}"`, { field: "modelo", oldValue: lead.modelo || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, modelo: v, activities: acts }); }} />
-                  <EditableDetailRow icon={<Car size={12} />} label="Ref. vehículo" value={lead.referenciaVehiculo || "—"} fieldKey="referenciaVehiculo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <DetailRow icon={<DollarSign size={12} />} label="Valor asegurado" value={formatMonto(lead.monto)} mono />
-                  <EditableDetailRow icon={<DollarSign size={12} />} label="Valor prima" value={lead.valorPrima ? formatMonto(lead.valorPrima) : "—"} fieldKey="valorPrima" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v === "—" ? "" : String(lead.valorPrima || "")); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => { if (!lead) return; const val = Number(nv); const acts = [addActivity("field_edit", `Valor prima: "${old}" → "${formatMonto(val)}"`, { field: k, oldValue: old, newValue: formatMonto(val) }), ...(lead.activities || [])]; onUpdateLead({ ...lead, valorPrima: val, activities: acts }); setEditingField(null); }} onCancelEdit={() => setEditingField(null)} />
-                  {calculatedCommission > 0 && (
-                    <DetailRow icon={<TrendingUp size={12} />} label={`Comisión (${commission}%)`} value={formatMonto(calculatedCommission)} mono />
-                  )}
-                  <DropdownDetailRow icon={<CreditCard size={12} />} label="Tipo pago" value={lead.tipoPago || "—"} options={["Contado", "Financiado"]} onChange={(v) => { const acts = [addActivity("field_edit", `Tipo pago: "${lead.tipoPago || '—'}" → "${v}"`, { field: "tipoPago", oldValue: lead.tipoPago || "—", newValue: v }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoPago: v, numeroCuotas: v === "Contado" ? undefined : lead.numeroCuotas, activities: acts }); }} />
-                  {lead.tipoPago === "Financiado" && (
-                    <>
-                      <EditableDetailRow icon={<Hash size={12} />} label="Nº cuotas" value={lead.numeroCuotas?.toString() || "—"} fieldKey="numeroCuotas" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v === "—" ? "" : v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={(k, l, old, nv) => { if (!lead) return; const val = Number(nv); const acts = [addActivity("field_edit", `Cuotas: "${old}" → "${val}"`, { field: k, oldValue: old, newValue: String(val) }), ...(lead.activities || [])]; onUpdateLead({ ...lead, numeroCuotas: val, activities: acts }); setEditingField(null); }} onCancelEdit={() => setEditingField(null)} />
-                      {cuotaCalc !== undefined && (
-                        <DetailRow icon={<DollarSign size={12} />} label="Valor cuota" value={formatMonto(cuotaCalc)} mono />
-                      )}
-                    </>
-                  )}
-                </div>
-              </CollapsibleSection>
+            <div className="w-[350px] shrink-0 border-r border-border overflow-y-auto">
+              
+              <LeadVehicleFields 
+                lead={lead} config={config} onUpdateLead={onUpdateLead} open={aboutOpen} onToggle={() => setAboutOpen(!aboutOpen)}
+                editingField={editingField} editFieldValue={editFieldValue}
+                setEditingField={setEditingField} setEditFieldValue={setEditFieldValue} handleFieldEdit={handleFieldEdit}
+                formatMonto={formatMonto} commission={commission} calculatedCommission={calculatedCommission} cuotaCalc={cuotaCalc}
+              />
 
-              {/* CAMPOS CLIENTE */}
-              <CollapsibleSection title="CAMPOS CLIENTE" icon={<Users size={13} />} open={clientFieldsOpen} onToggle={() => setClientFieldsOpen(!clientFieldsOpen)}>
-                <div className="space-y-2.5">
-                  <DropdownDetailRow icon={<CreditCard size={12} />} label="Tipo identificación" value={lead.tipoIdentificacion || "—"} options={config.idTypes.map(t => `${t.code} - ${t.label}`)} onChange={(v) => { const code = v.split(" - ")[0]; const acts = [addActivity("field_edit", `Tipo ID: "${lead.tipoIdentificacion || '—'}" → "${code}"`, { field: "tipoIdentificacion", oldValue: lead.tipoIdentificacion || "—", newValue: code }), ...(lead.activities || [])]; onUpdateLead({ ...lead, tipoIdentificacion: code, activities: acts }); }} />
-                  <EditableDetailRow icon={<Hash size={12} />} label="Nº identificación" value={lead.numeroIdentificacion || "—"} fieldKey="numeroIdentificacion" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
+              <LeadClientFields 
+                lead={lead} config={config} onUpdateLead={onUpdateLead} open={clientFieldsOpen} onToggle={() => setClientFieldsOpen(!clientFieldsOpen)}
+                editingField={editingField} editFieldValue={editFieldValue}
+                setEditingField={setEditingField} setEditFieldValue={setEditFieldValue} handleFieldEdit={handleFieldEdit}
+                allPhones={allPhones} allEmails={allEmails}
+              />
 
-                  {isNit ? (
-                    <>
-                      <EditableDetailRow icon={<Building2 size={12} />} label="Empresa" value={lead.empresaNombre || "—"} fieldKey="empresaNombre" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<User size={12} />} label="Rep. legal" value={lead.representanteLegal || "—"} fieldKey="representanteLegal" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<Hash size={12} />} label="Cédula rep." value={lead.cedulaRepresentante || "—"} fieldKey="cedulaRepresentante" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<Calendar size={12} />} label="Fecha nac. rep." value={lead.fechaNacimientoRL || lead.fechaNacimiento || "—"} fieldKey="fechaNacimientoRL" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<MapPin size={12} />} label="Lugar exp. cédula" value={lead.lugarExpedicionRL || "—"} fieldKey="lugarExpedicionRL" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                    </>
-                  ) : (
-                    <>
-                      <EditableDetailRow icon={<User size={12} />} label="Nombres" value={lead.nombres || lead.propietario.split(" ").slice(0, -1).join(" ") || "—"} fieldKey="nombres" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<User size={12} />} label="Apellidos" value={lead.apellidos || lead.propietario.split(" ").slice(-1).join(" ") || "—"} fieldKey="apellidos" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<UserCircle size={12} />} label="Sexo" value={lead.sexo || "—"} fieldKey="sexo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                      <EditableDetailRow icon={<Calendar size={12} />} label="Fecha nacimiento" value={lead.fechaNacimiento || "—"} fieldKey="fechaNacimiento" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                    </>
-                  )}
-
-                  <EditableDetailRow icon={<MapPin size={12} />} label="Ciudad" value={lead.ciudad || "—"} fieldKey="ciudad" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <EditableDetailRow icon={<Building2 size={12} />} label="Departamento" value={lead.departamento || "—"} fieldKey="departamento" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-
-                  {/* Phones */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone size={10} />Teléfono(s)</span>
-                      <button onClick={() => setAddingPhone(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
-                    </div>
-                    {allPhones.map((ph, i) => (
-                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
-                        <p className="text-xs text-foreground">{ph.value}</p>
-                        {ph.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{ph.label}</span>}
-                      </div>
-                    ))}
-                    {addingPhone && (
-                      <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Teléfono" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
-                        <input value={newPhoneLabel} onChange={e => setNewPhoneLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
-                        <button onClick={handleAddPhone} className="text-primary"><Check size={11} /></button>
-                        <button onClick={() => setAddingPhone(false)} className="text-muted-foreground"><X size={11} /></button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Emails */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail size={10} />Email(s)</span>
-                      <button onClick={() => setAddingEmail(true)} className="text-primary hover:text-primary/80"><Plus size={10} /></button>
-                    </div>
-                    {allEmails.map((em, i) => (
-                      <div key={i} className="flex items-center gap-1.5 ml-4 py-0.5">
-                        <p className="text-xs text-foreground truncate">{em.value}</p>
-                        {em.label && <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{em.label}</span>}
-                      </div>
-                    ))}
-                    {addingEmail && (
-                      <div className="flex items-center gap-1 mt-1 ml-4">
-                        <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Email" className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" autoFocus />
-                        <input value={newEmailLabel} onChange={e => setNewEmailLabel(e.target.value)} placeholder="Nombre" className="w-20 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded" />
-                        <button onClick={handleAddEmail} className="text-primary"><Check size={11} /></button>
-                        <button onClick={() => setAddingEmail(false)} className="text-muted-foreground"><X size={11} /></button>
-                      </div>
-                    )}
-                  </div>
-
-                  <EditableDetailRow icon={<Car size={12} />} label="Clase" value={lead.clase || "—"} fieldKey="clase" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <EditableDetailRow icon={<Palette size={12} />} label="Color vehículo" value={lead.colorVehiculo || "—"} fieldKey="colorVehiculo" editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                  <EditableDetailRow icon={<Hash size={12} />} label="Fasecolda ID" value={lead.fasecolda || "—"} fieldKey="fasecolda" mono editingField={editingField} onStartEdit={(k, v) => { setEditingField(k); setEditFieldValue(v); }} editFieldValue={editFieldValue} onEditFieldChange={setEditFieldValue} onSaveEdit={handleFieldEdit} onCancelEdit={() => setEditingField(null)} />
-                </div>
-              </CollapsibleSection>
-
-              {/* GESTIÓN */}
               <CollapsibleSection title="GESTIÓN" icon={<ActivityIcon size={13} />} open={detailsOpen} onToggle={() => setDetailsOpen(!detailsOpen)}>
                 <div className="space-y-3">
                   <div>
@@ -376,6 +321,18 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                     </select>
                   </div>
                   <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Vencimiento Póliza</label>
+                    <input 
+                      type="date" 
+                      value={lead.expirationDate ? lead.expirationDate.split("/").reverse().join("-") : ""} 
+                      onChange={(e) => {
+                        const val = e.target.value ? e.target.value.split("-").reverse().join("/") : "";
+                        onUpdateLead({ ...lead, expirationDate: val });
+                      }}
+                      className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring" 
+                    />
+                  </div>
+                  <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Observación</label>
                     <textarea value={editRemark} onChange={(e) => setEditRemark(e.target.value)} rows={2} className="w-full text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
                   </div>
@@ -386,163 +343,171 @@ export function DetailPanel({ lead, onClose, onUpdateLead, onCreateLeadFromOppor
                 </div>
               </CollapsibleSection>
 
-              <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} onCreateLeadFromOpportunity={onCreateLeadFromOpportunity} />
-
-              {/* Tasks Section */}
+              {onCreateLeadFromOpportunity && (
+                <OpportunitiesSection lead={lead} onUpdateLead={onUpdateLead} onCreateLeadFromOpportunity={onCreateLeadFromOpportunity} />
+              )}
+              
               <TasksSection lead={lead} onUpdateLead={onUpdateLead} users={config.users} />
 
-              {/* Emission Checklist - show when in "emitido" stage or final stages */}
               {config.pipelineStages.some(s => (s.key === lead.state && s.order >= 4) || (s.key === lead.state && s.isFinal)) && (
                 <EmissionChecklist lead={lead} checklistItems={config.emissionChecklist} onUpdateLead={onUpdateLead} />
               )}
             </div>
 
             {/* RIGHT: Activity Timeline */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="border-b border-border px-4 pt-3">
-                <div className="flex items-center gap-4">
-                  {(["all", "notes", "calls", "docs"] as const).map((tab) => (
-                    <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`pb-2.5 text-xs font-medium border-b-2 transition-colors ${activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                      {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : tab === "calls" ? "Actividad" : "Docs"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {activeTab === "docs" ? (
-                <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
-              ) : (
-                <>
-                  <div className="px-4 py-3 border-b border-border space-y-2">
-                    <div className="flex gap-2">
-                      <select value={activityType} onChange={(e) => setActivityType(e.target.value as any)} className="text-xs py-2 px-2 bg-muted/50 border border-border rounded-lg">
-                        <option value="note">📝 Nota</option><option value="call">📞 Llamada</option><option value="email">✉️ Email</option><option value="whatsapp">💬 WhatsApp</option>
-                      </select>
-                      <input id="note-input" type="text" placeholder="Descripción de la actividad..." value={newNote} onChange={(e) => setNewNote(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && newNote.trim() && handleSave()}
-                        className="flex-1 text-xs py-2 px-3 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 flex-1">
-                        <CalendarDays size={12} className="text-muted-foreground shrink-0" />
-                        <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md flex-1" />
-                        <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="text-xs py-1.5 px-2 bg-muted/50 border border-border rounded-md w-24" />
-                      </div>
-                      <button onClick={handleSave} disabled={!newNote.trim() || saving} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-40">
-                        {scheduledDate ? "Programar" : "Enviar"}
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      {scheduledDate ? <><Bell size={10} className="text-primary" /> Se agregará a la Agenda</> : <>💡 Sin fecha = nota rápida (no aparece en Agenda)</>}
-                    </p>
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="border-b border-border px-6 pt-3 flex items-center justify-between bg-muted/5 relative">
+                  <div className="flex items-center gap-6 relative">
+                    {(["all", "notes", "calls", "docs", "scanner"] as const).map((tab) => {
+                      const isActive = activeTab === tab;
+                      return (
+                        <button 
+                          key={tab} 
+                          onClick={() => setActiveTab(tab)}
+                          className={`group relative pb-3 text-xs font-black uppercase tracking-[0.1em] transition-all duration-300 flex items-center gap-2 ${
+                            isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-40 hover:opacity-100 hover:text-foreground"
+                          }`}>
+                          <span className={`${isActive ? "scale-110" : "opacity-40 group-hover:opacity-100 group-hover:scale-110"} transition-all duration-300`}>
+                            {tab === "all" ? <ActivityIcon size={13} strokeWidth={2.5} /> : 
+                             tab === "notes" ? <StickyNote size={13} strokeWidth={2.5} /> : 
+                             tab === "calls" ? <Phone size={13} strokeWidth={2.5} /> : 
+                             tab === "docs" ? <FileText size={13} strokeWidth={2.5} /> : 
+                             <ScanLine size={13} strokeWidth={2.5} />}
+                          </span>
+                          {tab === "all" ? "Todo" : tab === "notes" ? "Notas" : tab === "calls" ? "Actividad" : tab === "docs" ? "Docs" : "IA Scan"}
+                          
+                          {isActive && (
+                            <motion.div 
+                              layoutId="activeTabUnderline"
+                              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
+                  <button 
+                    onClick={() => setShowSystemOnly(!showSystemOnly)}
+                    className={`text-[9px] px-3 py-1 rounded-full border-2 font-black uppercase tracking-widest transition-all duration-300 ${
+                      showSystemOnly 
+                        ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105" 
+                        : "border-border text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                    }`}
+                  >
+                    Solo Sistema
+                  </button>
+                </div>
 
-                  <div className="flex-1 overflow-y-auto px-4 py-3">
-                    {filteredActivities.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3"><MessageSquare size={16} className="text-muted-foreground" /></div>
-                        <p className="text-xs text-muted-foreground">Sin actividad registrada.</p>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div className="absolute left-[11px] top-3 bottom-3 w-px bg-border" />
-                        <div className="space-y-1">
-                          {filteredActivities.map((activity) => (
-                            <ActivityItem key={activity.id} activity={activity} onUpdate={(updated) => {
-                              if (!lead) return;
-                              const newActivities = (lead.activities || []).map((a) => a.id === updated.id ? updated : a);
-                              onUpdateLead({ ...lead, activities: newActivities });
-                            }} />
-                          ))}
+                {activeTab === "scanner" ? (
+                  <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                    <PermissionGuard action="scan_docs" showLocked lockMessage="No tienes permisos para usar el escáner de IA">
+                      <DocumentScanner lead={lead} onUpdateLead={onUpdateLead} />
+                    </PermissionGuard>
+                  </div>
+                ) : activeTab === "docs" ? (
+                  <DocumentsView lead={lead} onUpdateLead={onUpdateLead} />
+                ) : (
+                  <>
+                    <div className="px-6 py-5 border-b border-border/50 bg-gradient-to-b from-muted/20 to-transparent space-y-4">
+                      <div className="flex gap-3 items-stretch">
+                        <div className="relative group overflow-hidden rounded-xl border border-border bg-background shadow-sm transition-all hover:bg-muted/30 w-36">
+                          <select 
+                            value={activityType} 
+                            onChange={(e) => setActivityType(e.target.value as any)} 
+                            className="w-full h-full text-[11px] font-black uppercase tracking-widest py-2.5 pl-3 pr-8 bg-transparent appearance-none cursor-pointer focus:outline-none"
+                          >
+                            <option value="note">📝 Nota</option>
+                            <option value="call">📞 Llamada</option>
+                            <option value="email">✉️ Email</option>
+                            <option value="whatsapp">💬 WhatsApp</option>
+                          </select>
+                          <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none group-hover:text-primary transition-colors" />
+                        </div>
+                        
+                        <div className="flex-1 relative group">
+                          <input 
+                            id="note-input" 
+                            type="text" 
+                            placeholder="Escribe un comentario..." 
+                            value={newNote} 
+                            onChange={(e) => setNewNote(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && newNote.trim() && handleSave()}
+                            className="w-full h-full text-xs font-medium py-2.5 px-4 bg-background border border-border/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/40 shadow-sm transition-all" 
+                          />
                         </div>
                       </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+                      
+                      <div className="flex items-center justify-between gap-4 pl-1">
+                        <div className="flex items-center gap-4 text-muted-foreground">
+                          <div className="flex items-center gap-2 group cursor-pointer">
+                            <Clock size={14} className="group-hover:text-primary transition-colors" strokeWidth={2.5} />
+                            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 shadow-xs transition-all hover:border-primary/30">
+                              <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="text-[10px] font-black uppercase bg-transparent outline-none w-20" />
+                              <div className="w-px h-3 bg-border" />
+                              <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="text-[10px] font-black uppercase bg-transparent outline-none w-14" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={handleSave} 
+                          disabled={!newNote.trim() || saving} 
+                          className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl transition-all duration-300 transform active:scale-95 ${
+                            scheduledDate 
+                              ? "bg-emerald-600 text-white shadow-emerald-600/20 hover:bg-emerald-700" 
+                              : "bg-primary text-white shadow-primary/30 hover:bg-primary/90"
+                          } disabled:opacity-30 disabled:scale-100`}
+                        >
+                          {saving ? (
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            scheduledDate ? "Programar" : "Enviar"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground">
+                      {filteredActivities.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3"><MessageSquare size={16} className="text-muted-foreground" /></div>
+                          <p className="text-xs text-muted-foreground">Sin registros.</p>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          {/* Timeline Line */}
+                          <div className="absolute left-[17px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
+                          
+                          <div className="space-y-6">
+                            {Object.entries(activityGroups).map(([date, acts]) => (
+                              <div key={date} className="relative">
+                                <div className="sticky top-0 z-20 mb-4 flex justify-center">
+                                  <span className="px-3 py-0.5 rounded-full bg-background border border-border text-[10px] font-bold text-muted-foreground uppercase tracking-widest shadow-sm">
+                                    {date}
+                                  </span>
+                                </div>
+                                <div className="space-y-4">
+                                  {acts.map((activity) => (
+                                    <ActivityItem key={activity.id} activity={activity} onUpdate={(updated) => {
+                                      if (!lead) return;
+                                      const newActivities = (lead.activities || []).map((a) => a.id === updated.id ? updated : a);
+                                      onUpdateLead({ ...lead, activities: newActivities });
+                                    }} />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
           </div>
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-/* Sub-components */
-function ActionButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
-  return <button onClick={onClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors">{icon}{label}</button>;
-}
-
-function CollapsibleSection({ title, icon, open, onToggle, children }: { title: string; icon: React.ReactNode; open: boolean; onToggle: () => void; children: React.ReactNode }) {
-  return (
-    <div className="border-b border-border">
-      <button onClick={onToggle} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:bg-muted/50 transition-colors">
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{icon}{title}
-      </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
-    </div>
-  );
-}
-
-function DetailRow({ icon, label, value, mono }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0"><p className="text-[10px] text-muted-foreground">{label}</p><p className={`text-xs text-foreground truncate ${mono ? "font-mono" : ""}`}>{value}</p></div>
-    </div>
-  );
-}
-
-function DropdownDetailRow({ icon, label, value, options, onChange }: { icon: React.ReactNode; label: string; value: string; options: string[]; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-muted-foreground">{label}</p>
-        <select value={value} onChange={e => onChange(e.target.value)} className="w-full text-xs py-0.5 px-1 bg-transparent border-0 text-foreground cursor-pointer hover:bg-muted/50 rounded -ml-1">
-          <option value="—">—</option>
-          {options.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-function EditableDetailRow({ icon, label, value, fieldKey, mono, editingField, onStartEdit, editFieldValue, onEditFieldChange, onSaveEdit, onCancelEdit }: {
-  icon: React.ReactNode; label: string; value: string; fieldKey: string; mono?: boolean;
-  editingField: string | null; onStartEdit: (key: string, currentValue: string) => void;
-  editFieldValue: string; onEditFieldChange: (v: string) => void;
-  onSaveEdit: (key: string, label: string, oldValue: string, newValue: string) => void; onCancelEdit: () => void;
-}) {
-  const isEditing = editingField === fieldKey;
-  if (isEditing) {
-    return (
-      <div className="flex items-start gap-2">
-        <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
-          <div className="flex items-center gap-1">
-            <input value={editFieldValue} onChange={(e) => onEditFieldChange(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") onSaveEdit(fieldKey, label, value, editFieldValue); if (e.key === "Escape") onCancelEdit(); }}
-              className="flex-1 text-xs py-1 px-1.5 bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring" autoFocus />
-            <button onClick={() => onSaveEdit(fieldKey, label, value, editFieldValue)} className="p-0.5 text-primary"><Check size={11} /></button>
-            <button onClick={onCancelEdit} className="p-0.5 text-muted-foreground"><X size={11} /></button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-start gap-2 group cursor-pointer" onClick={() => onStartEdit(fieldKey, value === "—" ? "" : value)}>
-      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-muted-foreground">{label}</p>
-        <div className="flex items-center gap-1">
-          <p className={`text-xs text-foreground truncate ${mono ? "font-mono" : ""}`}>{value}</p>
-          <Pencil size={9} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-        </div>
-      </div>
-    </div>
   );
 }

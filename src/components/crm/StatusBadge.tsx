@@ -1,5 +1,5 @@
 import type { PipelineStatus, PipelineStageConfig } from "@/types/crm";
-import { STATUS_CONFIG, getStatusLabel, DEFAULT_PIPELINE_STAGES } from "@/types/crm";
+import { STATUS_CONFIG, DEFAULT_PIPELINE_STAGES } from "@/types/crm";
 
 interface StatusBadgeProps {
   status: PipelineStatus;
@@ -15,14 +15,18 @@ export function StatusBadge({ status, labelOverrides = {}, pipelineStages }: Sta
 
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border"
+      className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all hover:brightness-110"
       style={{
-        backgroundColor: color + "18",
+        backgroundColor: color + "12",
         color: color,
-        borderColor: color + "30",
+        borderColor: color + "25",
+        boxShadow: `0 2px 10px -4px ${color}40`,
       }}
     >
-      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+      <div className="relative flex h-1.5 w-1.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: color }}></span>
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: color }}></span>
+      </div>
       {label}
     </span>
   );

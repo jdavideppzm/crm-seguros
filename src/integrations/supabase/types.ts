@@ -7,13 +7,209 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "15.0"
   }
   public: {
     Tables: {
+      crm_leads: {
+        Row: {
+          id: string
+          user_id: string
+          propietario: string
+          placa: string | null
+          insurance: string | null
+          email: string | null
+          phone: string | null
+          state: string
+          monto: number | null
+          valor_prima: number | null
+          fecha: string | null
+          assigned_to: string | null
+          lugar: string | null
+          client_fields: Json | null
+          activities: Json | null
+          notes: Json | null
+          phones: Json | null
+          emails: Json | null
+          score: number | null
+          expiration_date: string | null
+          is_renewal: boolean | null
+          parent_lead_id: string | null
+          opportunity_type: string | null
+          comision_calculada: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          propietario: string
+          placa?: string | null
+          insurance?: string | null
+          email?: string | null
+          phone?: string | null
+          state?: string
+          monto?: number | null
+          valor_prima?: number | null
+          fecha?: string | null
+          assigned_to?: string | null
+          lugar?: string | null
+          client_fields?: Json | null
+          activities?: Json | null
+          notes?: Json | null
+          phones?: Json | null
+          emails?: Json | null
+          score?: number | null
+          expiration_date?: string | null
+          is_renewal?: boolean | null
+          parent_lead_id?: string | null
+          opportunity_type?: string | null
+          comision_calculada?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          propietario?: string
+          placa?: string | null
+          insurance?: string | null
+          email?: string | null
+          phone?: string | null
+          state?: string
+          monto?: number | null
+          valor_prima?: number | null
+          fecha?: string | null
+          assigned_to?: string | null
+          lugar?: string | null
+          client_fields?: Json | null
+          activities?: Json | null
+          notes?: Json | null
+          phones?: Json | null
+          emails?: Json | null
+          score?: number | null
+          expiration_date?: string | null
+          is_renewal?: boolean | null
+          parent_lead_id?: string | null
+          opportunity_type?: string | null
+          comision_calculada?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_parent_lead_id_fkey"
+            columns: ["parent_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          from_user: string
+          to_user: string | null
+          text: string
+          lead_id: string | null
+          lead_name: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          from_user: string
+          to_user?: string | null
+          text: string
+          lead_id?: string | null
+          lead_name?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          from_user?: string
+          to_user?: string | null
+          text?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      crm_alerts: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          message: string
+          lead_id: string | null
+          lead_name: string | null
+          created_by: string | null
+          dismissed: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          message: string
+          lead_id?: string | null
+          lead_name?: string | null
+          created_by?: string | null
+          dismissed?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          message?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          created_by?: string | null
+          dismissed?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_alerts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      crm_config: {
+        Row: {
+          id: string
+          user_id: string
+          config_data: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          config_data: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          config_data?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean

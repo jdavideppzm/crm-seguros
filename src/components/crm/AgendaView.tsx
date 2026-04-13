@@ -3,8 +3,9 @@ import {
   CalendarDays, Clock, ChevronLeft, ChevronRight, Bell,
   StickyNote, PhoneCall, Mail, Activity as ActivityIcon,
   AlertCircle, CheckCircle2, User, ChevronDown, MessageSquare,
-  Check, RotateCcw, Filter,
+  Check, RotateCcw, Filter, Calendar as CalendarIcon, List as ListIcon,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Lead, Activity } from "@/types/crm";
 
 const activityTypeConfig: Record<string, { icon: typeof StickyNote; color: string; label: string; bg: string }> = {
@@ -57,6 +58,7 @@ export function AgendaView({ leads, onSelectLead, onMarkDone, onReschedule }: Ag
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [rescheduleComment, setRescheduleComment] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const scheduledActivities = useMemo(() => {
     const items: ScheduledActivity[] = [];
@@ -150,23 +152,23 @@ export function AgendaView({ leads, onSelectLead, onMarkDone, onReschedule }: Ag
     <div className="flex-1 flex overflow-hidden">
       <div className="w-[380px] shrink-0 border-r border-border overflow-y-auto bg-card">
         {(overdueActivities.length > 0 || upcomingActivities.length > 0) && (
-          <div className="px-4 pt-4 space-y-2">
+          <div className="px-5 pt-5 space-y-3">
             {overdueActivities.length > 0 && (
               <button
                 onClick={() => { setActiveFilter("overdue"); setSelectedDate(null); }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${activeFilter === "overdue" ? "bg-destructive/20 border-destructive/40" : "bg-destructive/10 border-destructive/20 hover:bg-destructive/15"}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 ${activeFilter === "overdue" ? "bg-destructive/10 border-destructive/40 shadow-lg shadow-destructive/10" : "bg-destructive/5 border-destructive/10 hover:bg-destructive/10"}`}
               >
-                <AlertCircle size={14} className="text-destructive shrink-0" />
-                <span className="text-xs font-medium text-destructive">{overdueActivities.length} vencida{overdueActivities.length > 1 ? "s" : ""}</span>
+                <AlertCircle size={16} className="text-destructive shrink-0" />
+                <span className="text-xs font-black uppercase tracking-widest text-destructive">{overdueActivities.length} Vencida{overdueActivities.length > 1 ? "s" : ""}</span>
               </button>
             )}
             {upcomingActivities.length > 0 && (
               <button
                 onClick={() => { setActiveFilter("upcoming"); setSelectedDate(null); }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${activeFilter === "upcoming" ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20 hover:bg-primary/15"}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 ${activeFilter === "upcoming" ? "bg-primary/10 border-primary/40 shadow-lg shadow-primary/10" : "bg-primary/5 border-primary/10 hover:bg-primary/10"}`}
               >
-                <Bell size={14} className="text-primary shrink-0" />
-                <span className="text-xs font-medium text-primary">{upcomingActivities.length} próxima{upcomingActivities.length > 1 ? "s" : ""} (7 días)</span>
+                <Bell size={16} className="text-primary shrink-0" />
+                <span className="text-xs font-black uppercase tracking-widest text-primary">{upcomingActivities.length} Próxima{upcomingActivities.length > 1 ? "s" : ""}</span>
               </button>
             )}
           </div>
@@ -207,61 +209,113 @@ export function AgendaView({ leads, onSelectLead, onMarkDone, onReschedule }: Ag
           </div>
         </div>
 
-        <div className="px-4 pb-4 grid grid-cols-3 gap-2">
-          <button onClick={() => { setActiveFilter("all"); setSelectedDate(null); }}
-            className={`rounded-lg border p-3 text-center transition-colors ${activeFilter === "all" && !selectedDate ? "ring-2 ring-primary" : ""}`}>
-            <p className="text-lg font-bold text-foreground">{scheduledActivities.length}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">Total</p>
-          </button>
-          <button onClick={() => { setActiveFilter("overdue"); setSelectedDate(null); }}
-            className={`rounded-lg bg-destructive/5 border border-destructive/20 p-3 text-center transition-colors hover:bg-destructive/10 ${activeFilter === "overdue" && !selectedDate ? "ring-2 ring-destructive" : ""}`}>
-            <p className="text-lg font-bold text-destructive">{overdueActivities.length}</p>
-            <p className="text-[10px] text-destructive font-medium">Vencidas</p>
-          </button>
-          <button onClick={() => { setActiveFilter("upcoming"); setSelectedDate(null); }}
-            className={`rounded-lg bg-primary/5 border border-primary/20 p-3 text-center transition-colors hover:bg-primary/10 ${activeFilter === "upcoming" && !selectedDate ? "ring-2 ring-primary" : ""}`}>
-            <p className="text-lg font-bold text-primary">{upcomingActivities.length}</p>
-            <p className="text-[10px] text-primary font-medium">Próximas</p>
-          </button>
+        <div className="px-4 pb-5 pt-2 border-t border-border/50">
+          <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] mb-3">Resumen de actividades</p>
+          <div className="space-y-2">
+            <StatRow
+              icon={<CalendarDays size={14} />}
+              label="Total programadas"
+              value={scheduledActivities.length}
+              colorClass="text-primary bg-primary/10"
+              onClick={() => { setActiveFilter("all"); setSelectedDate(null); }}
+              active={activeFilter === "all" && !selectedDate}
+            />
+            <StatRow
+              icon={<AlertCircle size={14} />}
+              label="Vencidas"
+              value={overdueActivities.length}
+              colorClass="text-destructive bg-destructive/10"
+              onClick={() => { setActiveFilter("overdue"); setSelectedDate(null); }}
+              active={activeFilter === "overdue"}
+            />
+            <StatRow
+              icon={<Bell size={14} />}
+              label="Próximas 7 días"
+              value={upcomingActivities.length}
+              colorClass="text-status-seguimiento bg-status-seguimiento/10"
+              onClick={() => { setActiveFilter("upcoming"); setSelectedDate(null); }}
+              active={activeFilter === "upcoming"}
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-background">
         <div className="px-5 py-4">
-          {/* Filter tabs */}
-          <div className="flex items-center gap-2 mb-4">
-            {filterTabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => { setActiveFilter(tab.key); setSelectedDate(null); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${
-                  activeFilter === tab.key && !selectedDate
-                    ? tab.key === "overdue" ? "bg-destructive text-destructive-foreground" 
-                      : tab.key === "today" ? "bg-primary text-primary-foreground"
-                      : "bg-foreground text-background"
-                    : `${tab.color} hover:opacity-80`
-                }`}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-1">
+                {selectedDate 
+                  ? (() => { const [y, m, d] = selectedDate.split("-").map(Number); return `${d} de ${MONTH_NAMES[m]} ${y}`; })() 
+                  : activeFilter === "overdue" ? "Actividades vencidas"
+                  : activeFilter === "today" ? "Actividades de hoy"
+                  : activeFilter === "upcoming" ? "Próximas actividades (7 días)"
+                  : "Todas las actividades programadas"}
+              </h3>
+              <p className="text-xs text-muted-foreground">{displayActivities.length} actividad{displayActivities.length !== 1 ? "es" : ""}</p>
+            </div>
+            
+            <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border">
+              <button 
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {tab.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  activeFilter === tab.key && !selectedDate ? "bg-background/20" : "bg-background/50"
-                }`}>{tab.count}</span>
+                <ListIcon size={14} />
               </button>
-            ))}
+              <button 
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <CalendarIcon size={14} />
+              </button>
+            </div>
           </div>
 
-          <h3 className="text-sm font-semibold text-foreground mb-1">
-            {selectedDate 
-              ? (() => { const [y, m, d] = selectedDate.split("-").map(Number); return `${d} de ${MONTH_NAMES[m]} ${y}`; })() 
-              : activeFilter === "overdue" ? "Actividades vencidas"
-              : activeFilter === "today" ? "Actividades de hoy"
-              : activeFilter === "upcoming" ? "Próximas actividades (7 días)"
-              : "Todas las actividades programadas"}
-          </h3>
-          <p className="text-xs text-muted-foreground mb-4">{displayActivities.length} actividad{displayActivities.length !== 1 ? "es" : ""}</p>
-
           <div className="space-y-2">
-            {displayActivities.length === 0 ? (
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-xl overflow-hidden shadow-sm">
+                {DAY_NAMES.map(d => (
+                  <div key={d} className="bg-muted/30 py-2 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{d}</div>
+                ))}
+                {Array.from({ length: firstDay }).map((_, i) => (
+                  <div key={`empty-grid-${i}`} className="bg-card/30 min-h-[100px]" />
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const dateKey = `${currentYear}-${currentMonth}-${day}`;
+                  const dayActs = activitiesByDate[dateKey] || [];
+                  const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+                  const isSelected = selectedDate === dateKey;
+                  
+                  return (
+                    <div 
+                      key={day} 
+                      onClick={() => { setSelectedDate(isSelected ? null : dateKey); if (!isSelected) setActiveFilter("all"); setViewMode("list"); }}
+                      className={`bg-card min-h-[100px] p-2 transition-all cursor-pointer hover:bg-primary/5 group ${isToday ? "ring-inset ring-1 ring-primary/30" : ""}`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center ${isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
+                          {day}
+                        </span>
+                        {dayActs.length > 0 && <span className="text-[9px] font-bold text-primary/70">{dayActs.length} {dayActs.length === 1 ? 'act' : 'acts'}</span>}
+                      </div>
+                      <div className="space-y-1 overflow-hidden">
+                        {dayActs.slice(0, 3).map(act => (
+                          <div key={act.id} className="text-[9px] truncate px-1 py-0.5 rounded bg-primary/5 text-primary border border-primary/10 font-medium">
+                            {act.text}
+                          </div>
+                        ))}
+                        {dayActs.length > 3 && (
+                          <div className="text-[8px] text-center text-muted-foreground pt-0.5 font-medium">
+                            + {dayActs.length - 3} más
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : displayActivities.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3"><CalendarDays size={20} className="text-muted-foreground" /></div>
                 <p className="text-sm text-muted-foreground font-medium">
@@ -363,5 +417,41 @@ export function AgendaView({ leads, onSelectLead, onMarkDone, onReschedule }: Ag
         </div>
       </div>
     </div>
+  );
+}
+
+function StatRow({ icon, label, value, colorClass, onClick, active }: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  colorClass: string;
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 ${
+        active
+          ? 'bg-muted border border-border shadow-sm'
+          : onClick
+            ? 'hover:bg-muted/60 cursor-pointer'
+            : ''
+      }`}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 leading-none mb-0.5">{label}</p>
+        <p className="text-lg font-black text-foreground leading-none tabular-nums">{value}</p>
+      </div>
+      {value > 0 && onClick && (
+        <div className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${colorClass} opacity-70`}>
+          ver
+        </div>
+      )}
+    </Tag>
   );
 }

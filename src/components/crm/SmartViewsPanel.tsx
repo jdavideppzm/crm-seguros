@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Eye, Plus, X, Pencil, Trash2, Filter, Check } from "lucide-react";
+import { Eye, Plus, X, Pencil, Trash2, Filter, Check, LucideIcon, Flame, Phone, FileText, Search, Star, Target, Package, Rocket, Briefcase, BarChart3, Bell, Shield, Calendar, Users, MapPin, CreditCard, Zap, Mail, Globe, Lock } from "lucide-react";
+import * as Icons from "lucide-react";
 import type { SmartView } from "@/types/crm";
 
 interface SmartViewsPanelProps {
@@ -29,7 +30,16 @@ export function SmartViewsPanel({
           }`}
         >
           <span className="flex items-center gap-2 truncate">
-            <span>{sv.icon || "📋"}</span>
+            {sv.icon && Icons[sv.icon as keyof typeof Icons] ? (
+              <div className="text-secondary/80">
+                {(() => {
+                  const Icon = Icons[sv.icon as keyof typeof Icons] as LucideIcon;
+                  return <Icon size={14} />;
+                })()}
+              </div>
+            ) : (
+              <Eye size={14} className="text-secondary/80" />
+            )}
             <span className="truncate">{sv.name}</span>
           </span>
         </button>
@@ -70,7 +80,11 @@ export function SmartViewsSettings({
     setEditingId(null);
   };
 
-  const ICONS = ["📋", "🔥", "📞", "📄", "🔍", "⭐", "🎯", "📦", "🚀", "💼", "📊", "🔔"];
+  const ICONS = [
+    "Flame", "Phone", "FileText", "Search", "Star", "Target", "Package", "Rocket", 
+    "Briefcase", "BarChart3", "Bell", "Shield", "Calendar", "Users", "MapPin", 
+    "CreditCard", "Zap", "Mail", "Globe", "Lock", "Eye", "Check"
+  ];
 
   return (
     <div className="space-y-2">
@@ -83,11 +97,18 @@ export function SmartViewsSettings({
         }
         return (
           <div key={sv.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-border bg-muted/30">
-            <div className="flex items-center gap-2">
-              <span>{sv.icon}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                {(() => {
+                  const Icon = (Icons[sv.icon as keyof typeof Icons] || Icons.Eye) as LucideIcon;
+                  return <Icon size={16} />;
+                })()}
+              </div>
               <div>
-                <p className="text-sm text-foreground">{sv.name}</p>
-                <p className="text-[10px] text-muted-foreground">{sv.filterType === "status" ? "Estado" : sv.filterType === "assigned" ? "Asignado" : "Campo"}: {sv.filterValue}</p>
+                <p className="text-sm font-semibold text-foreground">{sv.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                  {sv.filterType === "status" ? "Estado" : sv.filterType === "assigned" ? "Asignado" : "Campo"}: {sv.filterValue}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -116,13 +137,23 @@ function SmartViewForm({ form, setForm, pipelineStages, icons, onSave, onCancel,
 }) {
   return (
     <div className={`rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <div className="relative">
-          <select value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} className="text-lg w-10 bg-transparent border-0 cursor-pointer">
-            {icons.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-          </select>
+      <div className="flex items-start gap-2">
+        <div className="grid grid-cols-6 gap-1 p-1 bg-background border border-border rounded-lg max-h-[120px] overflow-y-auto custom-scrollbar">
+          {icons.map(ic => {
+            const Icon = Icons[ic as keyof typeof Icons] as LucideIcon;
+            const isSelected = form.icon === ic;
+            return (
+              <button 
+                key={ic} 
+                onClick={() => setForm({ ...form, icon: ic })}
+                className={`p-1.5 rounded-md transition-all ${isSelected ? "bg-primary text-primary-foreground shadow-sm scale-110" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              >
+                <Icon size={14} />
+              </button>
+            );
+          })}
         </div>
-        <input value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nombre de la vista" className="flex-1 text-xs py-1.5 px-2 bg-background border border-border rounded-md" autoFocus />
+        <input value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nombre de la vista" className="flex-1 text-xs py-2 px-3 bg-background border border-border rounded-lg" autoFocus />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <select value={form.filterType} onChange={e => setForm({ ...form, filterType: e.target.value as any })} className="text-xs py-1.5 px-2 bg-background border border-border rounded-md">

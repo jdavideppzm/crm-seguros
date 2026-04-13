@@ -1,39 +1,71 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Lead, PipelineStatus, Opportunity, OpportunityType, Activity, CrmConfig, CrmAlert, ChatMessage, SmartView } from "@/types/crm";
-import { SEED_LEADS } from "@/data/seedData";
-import { OPPORTUNITY_TYPE_LABELS, DEFAULT_CRM_CONFIG, getStatusLabel, getInsuranceCommission } from "@/types/crm";
+import type { Lead, PipelineStatus, SmartView } from "@/types/crm";
+import { useCrmStore } from "@/store/crmStore";
+import { useAlertPopup } from "@/hooks/useAlertPopup";
+import { useLeads } from "@/hooks/useLeads";
+
+// Components - Regular Imports
 import { CrmSidebar } from "@/components/crm/CrmSidebar";
 import { CrmHeader } from "@/components/crm/CrmHeader";
-import { LeadTable } from "@/components/crm/LeadTable";
-import { DetailPanel } from "@/components/crm/DetailPanel";
-import { ReportsView } from "@/components/crm/ReportsView";
-import { KanbanView } from "@/components/crm/KanbanView";
-import { AgendaView } from "@/components/crm/AgendaView";
-import { SettingsView } from "@/components/crm/SettingsView";
 import { CreateLeadModal } from "@/components/crm/CreateLeadModal";
 import { AlertsView } from "@/components/crm/AlertsView";
 import { ChatPanel } from "@/components/crm/ChatPanel";
 import { AlertPopup } from "@/components/crm/AlertPopup";
+import { CommandMenu } from "@/components/crm/CommandMenu";
+import { DetailPanel } from "@/components/crm/DetailPanel";
 
-type ViewType = "pipeline" | "kanban" | "reports" | "agenda" | "settings" | "alerts";
+// Components - Lazy Imports (to resolve conflicts and optimize)
+const DashboardView = lazy(() => import("../components/crm/DashboardView").then(m => ({ default: m.DashboardView })));
+const LeadTable = lazy(() => import("../components/crm/LeadTable").then(m => ({ default: m.LeadTable })));
+const KanbanView = lazy(() => import("../components/crm/KanbanView").then(m => ({ default: m.KanbanView })));
+const ClientDirectory = lazy(() => import("../components/crm/ClientDirectory").then(m => ({ default: m.ClientDirectory })));
+const ReportsView = lazy(() => import("../components/crm/ReportsView").then(m => ({ default: m.ReportsView })));
+const AgendaView = lazy(() => import("../components/crm/AgendaView").then(m => ({ default: m.AgendaView })));
+const SettingsView = lazy(() => import("../components/crm/SettingsView").then(m => ({ default: m.SettingsView })));
+const RenewalsView = lazy(() => import("../components/crm/RenewalsView").then(m => ({ default: m.RenewalsView })));
+const OmnichannelView = lazy(() => import("../components/crm/OmnichannelView").then(m => ({ default: m.OmnichannelView })));
+const CommissionView = lazy(() => import("../components/crm/CommissionView").then(m => ({ default: m.CommissionView })));
+
+type ViewType = "pipeline" | "kanban" | "clients" | "reports" | "agenda" | "settings" | "alerts" | "dashboard" | "renewals" | "communications" | "commissions";
 
 export default function Index() {
-  const { displayName } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>(SEED_LEADS);
-  const [activeView, setActiveView] = useState<ViewType>("pipeline");
+  const { displayName, isAdmin } = useAuth();
+  
+  // Local UI State
+  const [activeView, setActiveView] = useState<ViewType>("dashboard");
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | null>(null);
+  
+  // Sincronización Remota
+  const { loading: loadingLeads } = useLeads();
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [assignedFilter, setAssignedFilter] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [config, setConfig] = useState<CrmConfig>(DEFAULT_CRM_CONFIG);
   const [showCreateLead, setShowCreateLead] = useState(false);
-  const [alerts, setAlerts] = useState<CrmAlert[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(false);
+  const hasRanInitialChecks = useRef(false);
   const [activeSmartViewId, setActiveSmartViewId] = useState<string | null>(null);
-  const [popupActivity, setPopupActivity] = useState<(Activity & { leadId: string; leadName: string }) | null>(null);
+
+  // Consolidated Store State
+  const { 
+    leads, config, alerts, chatMessages, popupActivity,
+    updateLead, reorderLead, createLead, createLeadFromOpportunity,
+    markActivityDone, rescheduleActivity, redistributeLeads, bulkUpdateLeads,
+    bulkDeleteLeads, sendChat, dismissAlert, clearAlerts,
+    autoRenewLeads, evaluateInactivityRules, setConfig, setPopupActivity
+  } = useCrmStore();
+
+  // Hooks
+  useAlertPopup();
+
+  useEffect(() => {
+    if (!loadingLeads && (leads?.length || 0) > 0 && !hasRanInitialChecks.current) {
+      hasRanInitialChecks.current = true;
+      autoRenewLeads();
+      evaluateInactivityRules();
+    }
+  }, [loadingLeads]);
 
   const statusCounts = useMemo(() => {
     return leads.reduce<Record<PipelineStatus, number>>((acc, l) => {
@@ -54,77 +86,30 @@ export default function Index() {
 
   const alertCount = useMemo(() => alerts.filter(a => !a.dismissed).length, [alerts]);
 
-  // Alert popup timer — checks both activities and tasks
-  useEffect(() => {
-    const checkAlerts = () => {
-      const now = new Date();
-      const nowDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
-      const nowHH = now.getHours().toString().padStart(2, "0");
-      const nowMM = now.getMinutes().toString().padStart(2, "0");
-      const nowTime = `${nowHH}:${nowMM}`;
-
-      leads.forEach(lead => {
-        // Check scheduled activities
-        (lead.activities || []).forEach(act => {
-          if (act.scheduledAt && !act.completed) {
-            try {
-              const [datePart, timePart] = act.scheduledAt.split(" ");
-              const parts = datePart.split("/");
-              if (parts.length === 3) {
-                const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                if (timePart) {
-                  const [h, m] = timePart.split(":");
-                  d.setHours(parseInt(h), parseInt(m));
-                }
-                if (Math.abs(now.getTime() - d.getTime()) < 60000) {
-                  setPopupActivity({ ...act, leadId: lead.id, leadName: lead.propietario });
-                }
-              }
-            } catch {}
-          }
-        });
-
-        // Check tasks with date/time
-        (lead.tasks || []).forEach(task => {
-          if (!task.completed && task.date) {
-            const isToday = task.date === nowDate;
-            const isDue = !task.time || task.time === nowTime || (isToday && task.time <= nowTime);
-            if (isToday && isDue) {
-              // Convert task to activity-like popup
-              const priorityLabel = task.priority === "alta" ? "🔴 Alta" : task.priority === "media" ? "🟡 Media" : "🟢 Baja";
-              setPopupActivity({
-                id: task.id,
-                type: "note",
-                text: `📋 Tarea: ${task.name} (${priorityLabel})`,
-                author: task.assignedTo || "Sistema",
-                createdAt: task.createdAt,
-                scheduledAt: `${task.date}${task.time ? ` ${task.time}` : ""}`,
-                leadId: lead.id,
-                leadName: lead.propietario,
-              });
-            }
-          }
-        });
-      });
-    };
-
-    checkAlerts(); // Run immediately on mount
-    const interval = setInterval(checkAlerts, 30000);
-    return () => clearInterval(interval);
-  }, [leads]);
-
-  // Smart view filter
-  const activeSmartView = config.smartViews.find(sv => sv.id === activeSmartViewId);
+  const activeSmartView = config.smartViews?.find(sv => sv.id === activeSmartViewId);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
-      // Smart view filter
+      // Smart View filter — applied first
       if (activeSmartView) {
-        if (activeSmartView.filterType === "status" && l.state !== activeSmartView.filterValue) return false;
-        if (activeSmartView.filterType === "assigned" && l.assignedTo !== activeSmartView.filterValue) return false;
-        if (activeSmartView.filterType === "field" && activeSmartView.filterField) {
-          const fieldValue = (l as any)[activeSmartView.filterField];
-          if (fieldValue !== activeSmartView.filterValue) return false;
+        if (activeSmartView.filterType === "status") {
+          if (l.state !== activeSmartView.filterValue) return false;
+        } else if (activeSmartView.filterType === "assigned") {
+          if (l.assignedTo !== activeSmartView.filterValue) return false;
+        } else if (activeSmartView.filterType === "field") {
+          const field = activeSmartView.filterField;
+          const val = activeSmartView.filterValue;
+          if (field === "expirationDate" && val === "incoming") {
+            if (!l.expirationDate) return false;
+            const exp = new Date(l.expirationDate);
+            const now = new Date();
+            const diff = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+            if (diff < 0 || diff > 30) return false;
+          } else if (field === "smartCategory") {
+            if (l.smartCategory !== activeSmartView.id && l.smartCategory !== activeSmartView.name) return false;
+          } else if (field) {
+            if ((l as any)[field] !== val) return false;
+          }
         }
       }
       if (statusFilter && l.state !== statusFilter) return false;
@@ -138,152 +123,30 @@ export default function Index() {
     });
   }, [leads, statusFilter, searchQuery, locationFilter, assignedFilter, activeSmartView]);
 
-  // === Automation Engine ===
-  const runAutomations = useCallback((lead: Lead, oldState: string, newState: string) => {
-    const newActivities: Activity[] = [];
-    const newAlerts: CrmAlert[] = [];
-
-    config.automationRules.filter(r => r.enabled).forEach(rule => {
-      if (rule.trigger.type === "status_change") {
-        if (rule.trigger.toStatus && rule.trigger.toStatus === newState) {
-          if (rule.action.type === "create_activity") {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const dateStr = `${tomorrow.getDate()}/${tomorrow.getMonth() + 1}/${tomorrow.getFullYear()}`;
-            newActivities.push({
-              id: Date.now().toString() + "_auto" + Math.random().toString(36).slice(2, 4),
-              type: "automation",
-              text: `⚡ ${rule.action.activityText || rule.name}`,
-              author: "Sistema",
-              createdAt: new Date().toLocaleString("es-CO"),
-              scheduledAt: dateStr,
-              leadId: lead.id,
-              leadName: lead.propietario,
-            });
-          }
-          if (rule.action.type === "change_status" && rule.action.targetStatus) {
-            lead = { ...lead, state: rule.action.targetStatus };
-          }
-          if (rule.action.type === "send_alert" && rule.action.alertMessage) {
-            newAlerts.push({
-              id: Date.now().toString() + "_alert",
-              type: "automation",
-              message: rule.action.alertMessage,
-              leadId: lead.id,
-              leadName: lead.propietario,
-              createdBy: "Sistema",
-              createdAt: new Date().toLocaleString("es-CO"),
-              dismissed: false,
-            });
-          }
-        }
-      }
-    });
-
-    if (newAlerts.length > 0) {
-      setAlerts(prev => [...newAlerts, ...prev]);
-    }
-
-    return { lead, newActivities };
-  }, [config.automationRules]);
-
-  const handleUpdateLead = (updated: Lead) => {
-    const oldLead = leads.find(l => l.id === updated.id);
-    if (oldLead && oldLead.state !== updated.state) {
-      const { lead: automatedLead, newActivities } = runAutomations(updated, oldLead.state, updated.state);
-      updated = { ...automatedLead, activities: [...newActivities, ...(updated.activities || [])] };
-    }
-    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-    setSelectedLead(updated);
-  };
-
-  const handleCreateLeadFromOpportunity = (parentLead: Lead, opportunity: Opportunity) => {
-    const newLead: Lead = {
-      id: Date.now().toString() + "_opp",
-      fecha: new Date().toLocaleDateString("es-CO", { day: "numeric", month: "numeric" }),
-      placa: opportunity.typeFields?.placa || opportunity.placa || "",
-      propietario: parentLead.propietario,
-      insurance: opportunity.aseguradora || parentLead.insurance,
-      email: parentLead.email, phone: parentLead.phone,
-      reference: `Opp: ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} - ${opportunity.description}`,
-      state: config.pipelineStages[0]?.key || "nuevo", followUp: "1",
-      remark: `Oportunidad ${OPPORTUNITY_TYPE_LABELS[opportunity.type]} vinculada a ${parentLead.placa || parentLead.propietario}`,
-      lugar: parentLead.lugar, tipoSeguro: opportunity.type === "vehiculo" ? parentLead.tipoSeguro : opportunity.type,
-      monto: opportunity.monto || 0, assignedTo: parentLead.assignedTo,
-      parentLeadId: parentLead.id, opportunityType: opportunity.type as OpportunityType,
-      tipoIdentificacion: parentLead.tipoIdentificacion, numeroIdentificacion: parentLead.numeroIdentificacion,
-      nombres: parentLead.nombres, apellidos: parentLead.apellidos, sexo: parentLead.sexo,
-      fechaNacimiento: parentLead.fechaNacimiento, ciudad: parentLead.ciudad, departamento: parentLead.departamento,
-      colorVehiculo: parentLead.colorVehiculo,
-      activities: [{ id: Date.now().toString(), type: "note", text: `Lead creado desde oportunidad de ${OPPORTUNITY_TYPE_LABELS[opportunity.type]}`, author: "Sistema", createdAt: new Date().toLocaleString("es-CO") }],
-    };
-    setLeads((prev) => [...prev, newLead]);
-  };
-
-  const handleMarkActivityDone = (leadId: string, activityId: string, note: string) => {
-    setLeads(prev => prev.map(l => {
-      if (l.id !== leadId) return l;
-      const targetAct = (l.activities || []).find(a => a.id === activityId);
-      const activities = (l.activities || []).map(a => a.id === activityId ? { ...a, completed: true } : a);
-      const completionActivity: Activity = {
-        id: Date.now().toString(), type: "note",
-        text: `✅ Actividad completada: "${targetAct?.text || ""}"${note ? ` — ${note}` : ""}`,
-        author: "Usuario", createdAt: new Date().toLocaleString("es-CO"),
-      };
-      return { ...l, activities: [completionActivity, ...activities] };
-    }));
-  };
-
-  const handleRescheduleActivity = (leadId: string, activityId: string, newDate: string, comment: string) => {
-    setLeads(prev => prev.map(l => {
-      if (l.id !== leadId) return l;
-      const oldAct = (l.activities || []).find(a => a.id === activityId);
-      const activities = (l.activities || []).map(a => a.id === activityId ? { ...a, scheduledAt: newDate } : a);
-      const rescheduleActivity: Activity = {
-        id: Date.now().toString(), type: "note",
-        text: `🔄 Reprogramada: "${oldAct?.text || ""}" de ${oldAct?.scheduledAt || "?"} a ${newDate}${comment ? ` — ${comment}` : ""}`,
-        author: "Usuario", createdAt: new Date().toLocaleString("es-CO"),
-      };
-      return { ...l, activities: [rescheduleActivity, ...activities] };
-    }));
-  };
-
-  const handleRedistributeLeads = (leadIds: string[], user: string) => {
-    setLeads(prev => prev.map(l => leadIds.includes(l.id) ? { ...l, assignedTo: user } : l));
-  };
-
-  const handleCreateLead = (lead: Lead) => {
-    setLeads(prev => [...prev, lead]);
-  };
-
-  const handleSendChat = (msg: Omit<ChatMessage, "id" | "createdAt">) => {
-    const newMsg: ChatMessage = { ...msg, id: Date.now().toString(), createdAt: new Date().toLocaleString("es-CO") };
-    setChatMessages(prev => [...prev, newMsg]);
-    // Create alert for mentioned user
-    if (msg.to) {
-      setAlerts(prev => [{
-        id: Date.now().toString() + "_chat",
-        type: "manual",
-        message: `${msg.from} te envió un mensaje${msg.leadName ? ` sobre ${msg.leadName}` : ""}`,
-        leadId: msg.leadId,
-        leadName: msg.leadName,
-        createdBy: msg.from,
-        createdAt: new Date().toLocaleString("es-CO"),
-        dismissed: false,
-      }, ...prev]);
+  const handleUpdateLeadWithSelection = (updated: Lead) => {
+    updateLead(updated);
+    if (selectedLead?.id === updated.id) {
+       setSelectedLead(updated);
     }
   };
 
-  const handleDismissAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, dismissed: true } : a));
+  const viewTitles: Record<string, string> = { 
+    dashboard: "Dashboard", 
+    pipeline: "Pipeline de Ventas", 
+    kanban: "Pipeline de Ventas", 
+    clients: "Directorio de Clientes",
+    reports: "Reportes", 
+    agenda: "Agenda", 
+    settings: "Configuración", 
+    alerts: "Alertas",
+    renewals: "Centro de Renovaciones",
+    communications: "Comunicaciones Omnicanal",
+    commissions: "Conciliación de Comisiones"
   };
-
-  const viewTitles: Record<string, string> = { pipeline: "Pipeline de Ventas", kanban: "Pipeline de Ventas", reports: "Reportes", agenda: "Agenda", settings: "Configuración", alerts: "Alertas" };
 
   const formatMonto = (m: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(m);
   const totalMonto = filteredLeads.reduce((s, l) => s + l.monto, 0);
 
-  // Split view: when a lead is selected in pipeline/kanban, show reduced list + detail
   const showSplitView = selectedLead && (activeView === "pipeline" || activeView === "kanban" || activeView === "agenda");
 
   return (
@@ -300,7 +163,10 @@ export default function Index() {
         smartViews={config.smartViews}
         activeSmartViewId={activeSmartViewId}
         onSelectSmartView={(id) => { setActiveSmartViewId(id); setStatusFilter(null); if (activeView !== "pipeline") setActiveView("pipeline"); }}
+        onUpdateSmartViews={(views) => setConfig({ ...config, smartViews: views })}
         companyInfo={config.companyInfo}
+        leads={leads}
+        logoUrl={config.logoUrl}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <CrmHeader
@@ -308,65 +174,77 @@ export default function Index() {
           subtitle={activeView === "settings" ? undefined : activeView !== "reports" && activeView !== "agenda" && activeView !== "alerts" ? `${filteredLeads.length} leads · ${formatMonto(totalMonto)}` : activeView === "agenda" ? `${scheduledCount} actividades programadas` : undefined}
           searchQuery={searchQuery} onSearchChange={setSearchQuery}
           onToggleChat={() => setShowChat(!showChat)}
+          onViewAlerts={() => setActiveView("alerts")}
           showChatButton
         />
-        <div className="flex-1 flex overflow-hidden">
-          {activeView === "pipeline" && (
-            <>
-              <div className={`${showSplitView ? "w-[30%] min-w-[280px]" : "flex-1"} flex flex-col min-w-0 transition-all`}>
-                <LeadTable leads={filteredLeads} onSelectLead={setSelectedLead} selectedLeadId={selectedLead?.id || null}
-                  locationFilter={locationFilter} onLocationFilterChange={setLocationFilter}
-                  assignedFilter={assignedFilter} onAssignedFilterChange={setAssignedFilter}
-                  statusLabels={config.statusLabels} onRedistributeLeads={handleRedistributeLeads}
-                  config={config} compact={!!showSplitView} />
-              </div>
-              {showSplitView && (
-                <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
-                  onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} expanded />
-              )}
-            </>
+        <div className="flex-1 flex overflow-hidden relative">
+          {loadingLeads && (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-sm font-medium text-muted-foreground animate-pulse">Sincronizando Base de Datos...</p>
+            </div>
           )}
-          {activeView === "kanban" && (
-            <>
-              <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} config={config} />
-              {showSplitView && (
-                <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
-                  onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
-              )}
-            </>
-          )}
-          {activeView === "agenda" && (
-            <>
-              <AgendaView leads={leads} onSelectLead={setSelectedLead}
-                onMarkDone={handleMarkActivityDone} onReschedule={handleRescheduleActivity} />
-              {showSplitView && (
-                <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLead}
-                  onCreateLeadFromOpportunity={handleCreateLeadFromOpportunity} config={config} />
-              )}
-            </>
-          )}
-          {activeView === "reports" && (
-            <ReportsView leads={filteredLeads} config={config}
-              customSections={config.customReportSections}
-              paymentStatuses={config.paymentStatuses} statusLabels={config.statusLabels} />
-          )}
-          {activeView === "alerts" && (
-            <AlertsView alerts={alerts} leads={leads} onSelectLead={(lead) => { setSelectedLead(lead); setActiveView("pipeline"); }}
-              onDismissAlert={handleDismissAlert} onClearAll={() => setAlerts([])} />
-          )}
-          {activeView === "settings" && (
-            <SettingsView config={config} onUpdateConfig={setConfig} />
-          )}
+          
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-background"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+            {activeView === "dashboard" && <DashboardView leads={leads} config={config} />}
+            {activeView === "clients" && <ClientDirectory leads={leads} config={config} onSelectLead={(lead) => { setSelectedLead(lead); setActiveView("pipeline"); }} />}
+            {activeView === "pipeline" && (
+              <>
+                <div className={`${showSplitView ? "w-[30%] min-w-[280px]" : "flex-1"} flex flex-col min-w-0 transition-all`}>
+                  <LeadTable leads={filteredLeads} onSelectLead={setSelectedLead} selectedLeadId={selectedLead?.id || null}
+                    locationFilter={locationFilter} onLocationFilterChange={setLocationFilter}
+                    assignedFilter={assignedFilter} onAssignedFilterChange={setAssignedFilter}
+                    statusLabels={config.statusLabels} onRedistributeLeads={redistributeLeads}
+                    onBulkUpdateLeads={bulkUpdateLeads} onBulkDeleteLeads={bulkDeleteLeads}
+                    onCreateSmartView={(newView) => setConfig({ ...config, smartViews: [...(config.smartViews || []), newView] })}
+                    config={config} compact={!!showSplitView} />
+                </div>
+                {showSplitView && (
+                  <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLeadWithSelection}
+                    onCreateLeadFromOpportunity={createLeadFromOpportunity} config={config} expanded />
+                )}
+              </>
+            )}
+            {activeView === "kanban" && (
+              <>
+                <KanbanView leads={filteredLeads} onSelectLead={setSelectedLead} statusLabels={config.statusLabels} pipelineStages={config.pipelineStages} config={config} onUpdateLead={handleUpdateLeadWithSelection} onReorderLead={reorderLead} />
+                {showSplitView && (
+                  <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLeadWithSelection}
+                    onCreateLeadFromOpportunity={createLeadFromOpportunity} config={config} />
+                )}
+              </>
+            )}
+            {activeView === "agenda" && (
+              <>
+                <AgendaView leads={leads} onSelectLead={setSelectedLead} onMarkDone={markActivityDone} onReschedule={rescheduleActivity} />
+                {showSplitView && (
+                  <DetailPanel lead={selectedLead} onClose={() => setSelectedLead(null)} onUpdateLead={handleUpdateLeadWithSelection}
+                    onCreateLeadFromOpportunity={createLeadFromOpportunity} config={config} />
+                )}
+              </>
+            )}
+            {activeView === "reports" && (
+              <ReportsView leads={filteredLeads} config={config} customSections={config.customReportSections} paymentStatuses={config.paymentStatuses} statusLabels={config.statusLabels} />
+            )}
+            {activeView === "alerts" && (
+              <AlertsView alerts={alerts} leads={leads} onSelectLead={(lead) => { setSelectedLead(lead); setActiveView("pipeline"); }} onDismissAlert={dismissAlert} onClearAll={clearAlerts} />
+            )}
+            {activeView === "communications" && <OmnichannelView leads={leads} config={config} />}
+            {activeView === "commissions" && <CommissionView leads={leads} config={config} onUpdateLead={updateLead} />}
+            {activeView === "settings" && <SettingsView config={config} onUpdateConfig={setConfig} />}
+            {activeView === "renewals" && <RenewalsView leads={leads} config={config} onSelectLead={setSelectedLead} onCreateLead={createLead} />}
+          </Suspense>
+
           {showChat && (activeView === "pipeline" || activeView === "kanban") && (
             <ChatPanel messages={chatMessages} currentUser={displayName || "Usuario"} users={config.users}
               leadId={selectedLead?.id} leadName={selectedLead?.propietario}
-              onSendMessage={handleSendChat} onClose={() => setShowChat(false)} />
+              onSendMessage={sendChat} onClose={() => setShowChat(false)} />
           )}
         </div>
       </div>
-      <CreateLeadModal open={showCreateLead} onClose={() => setShowCreateLead(false)} onCreateLead={handleCreateLead} config={config} />
+      
+      <CreateLeadModal open={showCreateLead} onClose={() => setShowCreateLead(false)} onCreateLead={createLead} config={config} />
 
-      {/* Alert Popup */}
       <AlertPopup
         activity={popupActivity}
         onViewLead={(leadId) => {
@@ -375,6 +253,13 @@ export default function Index() {
           setPopupActivity(null);
         }}
         onDismiss={() => setPopupActivity(null)}
+      />
+      
+      <CommandMenu 
+        leads={leads} 
+        onSelectLead={(l) => { setSelectedLead(l); setActiveView("pipeline"); }} 
+        onNavigate={(v) => setActiveView(v as any)} 
+        onCreateLead={() => setShowCreateLead(true)} 
       />
     </div>
   );

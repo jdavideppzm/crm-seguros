@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .from("profiles")
               .select("display_name")
               .eq("user_id", session.user.id)
-              .single();
+              .maybeSingle();
 
             setDisplayName(profile?.display_name || session.user.email || "");
           }, 0);

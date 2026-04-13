@@ -63,6 +63,10 @@ export interface Lead {
   // Tasks & Checklist
   tasks?: LeadTask[];
   emissionChecklist?: Record<string, boolean>;
+  expirationDate?: string;
+  score?: number;
+  isRenewal?: boolean;
+  smartCategory?: string;
 }
 
 // === Lead Tasks ===
@@ -110,10 +114,21 @@ export interface CrmAlert {
   dismissed: boolean;
 }
 
+// === Activity Log ===
+export interface ActivityLogEntry {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  createdAt: string;
+}
+
 // === Emission Checklist ===
 export interface EmissionCheckItem {
   id: string;
   label: string;
+  required?: boolean;
 }
 
 export const DEFAULT_EMISSION_CHECKLIST: EmissionCheckItem[] = [
@@ -133,6 +148,7 @@ export const DEFAULT_SMART_VIEWS: SmartView[] = [
   { id: "sv4", name: "Lograr avance", icon: "🎯", filterType: "status", filterValue: "seguimiento" },
   { id: "sv5", name: "En emisión", icon: "📦", filterType: "status", filterValue: "emitido" },
   { id: "sv6", name: "Gestionar a futuro", icon: "🚀", filterType: "status", filterValue: "ganado" },
+  { id: "sv7", name: "Próximos Vencimientos", icon: "⏰", filterType: "field", filterField: "expirationDate", filterValue: "incoming" },
 ];
 
 export interface ContactEntry {
@@ -147,7 +163,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type ActivityType = "note" | "call" | "email" | "status_change" | "field_edit" | "whatsapp" | "doc_selected" | "doc_summary" | "automation";
+export type ActivityType = "note" | "call" | "email" | "status_change" | "field_edit" | "whatsapp" | "doc_selected" | "doc_summary" | "automation" | "scan_summary";
 
 export interface ActivityComment {
   id: string;
@@ -357,15 +373,19 @@ export interface InsuranceCompany {
   accessUser?: string;
   accessPassword?: string;
   directContact?: string;
+  active: boolean;
+  logoUrl?: string;
 }
 
 export const DEFAULT_INSURANCE_COMPANIES: InsuranceCompany[] = [
-  { id: "ins1", name: "AXA COLPATRIA", commission: 15, contact: "contacto@axa.com" },
-  { id: "ins2", name: "MAPFRE", commission: 12, contact: "" },
-  { id: "ins3", name: "SEGUROS BOLIVAR", commission: 14, contact: "" },
-  { id: "ins4", name: "ALLIANZ", commission: 13, contact: "" },
-  { id: "ins5", name: "EQUIDAD", commission: 10, contact: "" },
-  { id: "ins6", name: "SURA", commission: 16, contact: "" },
+  { id: "ins1", name: "AXA COLPATRIA", commission: 15, contact: "contacto@axa.com.co", active: true, logoUrl: "https://vancentral.com.co/logos/axa-colpatria.png" },
+  { id: "ins2", name: "MAPFRE", commission: 12, contact: "atencion@mapfre.com.co", active: true, logoUrl: "https://vancentral.com.co/logos/mapfre.png" },
+  { id: "ins3", name: "SEGUROS BOLIVAR", commission: 14, contact: "cliente@segurosbolivar.com", active: true, logoUrl: "https://vancentral.com.co/logos/bolivar.png" },
+  { id: "ins4", name: "ALLIANZ", commission: 13, contact: "info@allianz.co", active: true, logoUrl: "https://vancentral.com.co/logos/allianz.png" },
+  { id: "ins5", name: "EQUIDAD SEGUROS", commission: 10, contact: "contacto@laequidadseguros.co", active: true, logoUrl: "https://vancentral.com.co/logos/equidad.png" },
+  { id: "ins6", name: "SURA", commission: 16, contact: "atencion@sura.com.co", active: true, logoUrl: "https://vancentral.com.co/logos/sura.png" },
+  { id: "ins7", name: "SBS SEGUROS", commission: 12, contact: "cliente@sbseguros.co", active: true, logoUrl: "https://vancentral.com.co/logos/sbs.png" },
+  { id: "ins8", name: "PREVISORA", commission: 10, contact: "contactenos@previsora.gov.co", active: true, logoUrl: "https://vancentral.com.co/logos/previsora.png" },
 ];
 
 // === Tipos de Póliza ===
@@ -498,13 +518,15 @@ export interface CrmUser {
   email: string;
   role: "admin" | "vendedor";
   active: boolean;
+  monthlyGoal?: number;
+  monthlySalesCountGoal?: number;
 }
 
 export const DEFAULT_CRM_USERS: CrmUser[] = [
-  { id: "u1", name: "Carlos M.", email: "carlos@crm.com", role: "admin", active: true },
-  { id: "u2", name: "Ana R.", email: "ana@crm.com", role: "vendedor", active: true },
-  { id: "u3", name: "Pedro L.", email: "pedro@crm.com", role: "vendedor", active: true },
-  { id: "u4", name: "María G.", email: "maria@crm.com", role: "vendedor", active: true },
+  { id: "u1", name: "Carlos M.", email: "carlos@crm.com", role: "admin", active: true, monthlyGoal: 150000000 },
+  { id: "u2", name: "Ana R.", email: "ana@crm.com", role: "vendedor", active: true, monthlyGoal: 100000000 },
+  { id: "u3", name: "Pedro L.", email: "pedro@crm.com", role: "vendedor", active: true, monthlyGoal: 50000000 },
+  { id: "u4", name: "María G.", email: "maria@crm.com", role: "vendedor", active: true, monthlyGoal: 50000000 },
 ];
 
 // === CRM Config Types ===
@@ -585,6 +607,8 @@ export interface CompanyInfo {
   nit: string;
   address: string;
   phone: string;
+  email?: string;
+  website?: string;
   logoUrl?: string;
 }
 
@@ -593,6 +617,8 @@ export const DEFAULT_COMPANY_INFO: CompanyInfo = {
   nit: "",
   address: "",
   phone: "",
+  email: "",
+  website: "",
 };
 
 // === User Permissions ===
@@ -637,6 +663,7 @@ export const ACTION_LABELS: Record<string, string> = {
   export_data: "Exportar datos",
   manage_users: "Gestionar usuarios",
   manage_automations: "Gestionar automatizaciones",
+  scan_docs: "Escaneo de documentos con IA",
 };
 
 // === Theme Presets ===
@@ -674,6 +701,11 @@ export interface LayoutConfig {
   density: DensityStyle;
   showKpiCards: boolean;
   tableStriped: boolean;
+  borderRadius: number; // 0 to 24px
+  shadowIntensity: "none" | "soft" | "medium" | "deep";
+  glassIntensity: number; // 0 to 100
+  fontFamily: "Inter" | "Plus Jakarta Sans" | "Roboto" | "Mono";
+  primaryCustomColor?: string;
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
@@ -682,6 +714,10 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   density: "normal",
   showKpiCards: true,
   tableStriped: false,
+  borderRadius: 12,
+  shadowIntensity: "soft",
+  glassIntensity: 20,
+  fontFamily: "Plus Jakarta Sans",
 };
 
 export interface CrmConfig {
@@ -704,6 +740,10 @@ export interface CrmConfig {
   layoutConfig: LayoutConfig;
   emissionChecklist: EmissionCheckItem[];
   smartViews: SmartView[];
+  activityLogs: ActivityLogEntry[];
+  fieldOverrides: Record<string, string>;
+  securityPin?: string;
+  logoUrl?: string;
 }
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
@@ -726,7 +766,15 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   layoutConfig: DEFAULT_LAYOUT_CONFIG,
   emissionChecklist: DEFAULT_EMISSION_CHECKLIST,
   smartViews: DEFAULT_SMART_VIEWS,
+  activityLogs: [],
+  fieldOverrides: {},
+  securityPin: "",
+  logoUrl: "",
 };
+
+export function getFieldLabel(config: CrmConfig, field: string, defaultLabel: string): string {
+  return config.fieldOverrides?.[field] || defaultLabel;
+}
 
 export const YEAR_OPTIONS = Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
 
@@ -754,4 +802,44 @@ export function getFinalStages(config: CrmConfig): PipelineStageConfig[] {
 export function getInsuranceCommission(config: CrmConfig, insuranceName: string): number {
   const company = config.insuranceCompanies.find(c => c.name === insuranceName);
   return company?.commission || 0;
+}
+
+/**
+ * Calculates a score from 0 to 100 for a lead based on:
+ * - Completeness of data (40%)
+ * - Potential value (30%)
+ * - Recent activity (30%)
+ */
+export function calculateLeadScore(lead: Lead): number {
+  let score = 0;
+
+  // 1. Completeness (Max 40)
+  if (lead.propietario) score += 8;
+  if (lead.phone) score += 8;
+  if (lead.email) score += 8;
+  if (lead.placa) score += 8;
+  if (lead.insurance) score += 8;
+
+  // 2. Potential Value (Max 30)
+  if (lead.monto > 0) score += 10;
+  if (lead.monto > 2000000) score += 20;
+
+  // 3. Activity (Max 30)
+  const lastActivityDate = lead.activities?.[lead.activities.length - 1]?.createdAt;
+  if (lastActivityDate) {
+    try {
+      // Format: "DD/MM/YYYY, HH:MM:SS AM/PM" or similar
+      const parts = lastActivityDate.split(", ")[0].split("/");
+      const dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      const diff = Date.now() - dateObj.getTime();
+      const hours = diff / (1000 * 60 * 60);
+      if (hours < 24) score += 30;
+      else if (hours < 72) score += 20;
+      else if (hours < 168) score += 10;
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  return Math.min(score, 100);
 }

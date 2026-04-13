@@ -10,7 +10,10 @@ interface CreateLeadModalProps {
   config: CrmConfig;
 }
 
+import { getFieldLabel } from "@/types/crm";
+
 export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateLeadModalProps) {
+  // ... (previous state and logic)
   const [form, setForm] = useState<Partial<Lead>>({ state: config.pipelineStages[0]?.key || "nuevo", tipoSeguro: "todo riesgo", tipoIdentificacion: config.idTypes[0]?.code || "CC" });
 
   if (!open) return null;
@@ -21,6 +24,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
   const activeUsers = config.users.filter(u => u.active);
 
   const handleCreate = () => {
+    // ... logic remains same
     const requiredFields = config.leadFormFields.filter(f => f.enabled && f.required);
     for (const rf of requiredFields) {
       const val = (form as any)[rf.key];
@@ -113,7 +117,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
         );
       case "insurance":
         return (
-          <FormField label="Aseguradora">
+          <FormField label={getFieldLabel(config, "insurance", "Aseguradora")}>
             <select value={form.insurance || ""} onChange={e => update("insurance", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
               <option value="">Seleccionar</option>
               {config.insuranceCompanies.map(c => <option key={c.id} value={c.name}>{c.name} ({c.commission}%)</option>)}
@@ -145,14 +149,14 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
       case "email":
         return <FormField label="Email"><input value={form.email || ""} onChange={e => update("email", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "placa":
-        return <FormField label="Placa"><input value={form.placa || ""} onChange={e => update("placa", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg font-mono uppercase" /></FormField>;
+        return <FormField label={getFieldLabel(config, "placa", "Placa")}><input value={form.placa || ""} onChange={e => update("placa", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg font-mono uppercase" /></FormField>;
       case "lugar":
         return <FormField label="Ciudad"><input value={form.lugar || ""} onChange={e => update("lugar", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "marca":
-        return <FormField label="Marca"><input value={form.marca || ""} onChange={e => update("marca", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
+        return <FormField label={getFieldLabel(config, "marca", "Marca")}><input value={form.marca || ""} onChange={e => update("marca", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "modelo":
         return (
-          <FormField label="Modelo">
+          <FormField label={getFieldLabel(config, "modelo", "Modelo")}>
             <select value={form.modelo || ""} onChange={e => update("modelo", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg">
               <option value="">Año</option>{YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -182,7 +186,7 @@ export function CreateLeadModal({ open, onClose, onCreateLead, config }: CreateL
       case "fechaNacimiento":
         return <FormField label="Fecha nacimiento"><input type="date" value={form.fechaNacimiento || ""} onChange={e => update("fechaNacimiento", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "colorVehiculo":
-        return <FormField label="Color vehículo"><input value={form.colorVehiculo || ""} onChange={e => update("colorVehiculo", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
+        return <FormField label={getFieldLabel(config, "colorVehiculo", "Color vehículo")}><input value={form.colorVehiculo || ""} onChange={e => update("colorVehiculo", e.target.value)} className="w-full text-xs py-2 px-2.5 bg-muted/50 border border-border rounded-lg" /></FormField>;
       case "tipoServicio":
         return (
           <FormField label="Tipo servicio">

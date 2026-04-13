@@ -66,6 +66,37 @@ export function ReportsView({ leads, config, customSections = [], paymentStatuse
         <SummaryCard label="Ganados / Perdidos" value={`${wonCount} / ${lostCount}`} />
       </div>
 
+      {/* Funnel Section */}
+      <ReportCard title="Embudo de Conversión (Funnel)">
+        <div className="py-6 flex flex-col items-center">
+          {config.pipelineStages.map((stage, idx) => {
+            const count = leads.filter(l => l.state === stage.key).length;
+            const percentage = leads.length > 0 ? Math.round((count / leads.length) * 100) : 0;
+            // Funnel width decreases
+            const width = 100 - (idx * 8); 
+            return (
+              <div key={stage.key} className="flex flex-col items-center w-full mb-1">
+                <div 
+                  className="h-10 flex items-center justify-between px-4 transition-all hover:brightness-110"
+                  style={{ 
+                    width: `${width}%`, 
+                    backgroundColor: stage.color,
+                    borderRadius: "4px",
+                    opacity: 0.8 + (idx * 0.05)
+                  }}
+                >
+                  <span className="text-white text-[11px] font-bold truncate">{stage.label}</span>
+                  <span className="text-white text-xs font-mono">{count} ({percentage}%)</span>
+                </div>
+                {idx < config.pipelineStages.length - 1 && (
+                    <div className="w-0.5 h-3 bg-muted-foreground/20" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </ReportCard>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* By Stage */}
         <ReportCard title="Por Estado del Pipeline">
@@ -145,13 +176,30 @@ export function ReportsView({ leads, config, customSections = [], paymentStatuse
         )}
 
         {/* By Origin */}
-        <ReportCard title="Por Origen del Lead">
-          {aggregate((l) => l.origenLead || "Sin origen").map(([origin, data]) => (
-            <div key={origin} className="flex items-center justify-between py-2">
-              <span className="text-sm text-foreground">{origin} <span className="text-xs text-muted-foreground">({data.count})</span></span>
-              <span className="font-mono text-sm font-medium text-foreground">{formatMonto(data.total)}</span>
-            </div>
-          ))}
+        <ReportCard title="Tasa de Conversión por Origen">
+          {Object.entries(
+            leads.reduce<Record<string, { total: number; won: number }>>((acc, l) => {
+              const origin = l.origenLead || "Sin origen";
+              if (!acc[origin]) acc[origin] = { total: 0, won: 0 };
+              acc[origin].total++;
+              if (wonStages.includes(l.state)) acc[origin].won++;
+              return acc;
+            }, {})
+          ).map(([origin, data]) => {
+            const rate = data.total > 0 ? Math.round((data.won / data.total) * 100) : 0;
+            return (
+              <div key={origin} className="py-2.5">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm font-medium text-foreground">{origin}</span>
+                  <span className="text-[11px] font-mono text-primary font-bold">{rate}% éxito</span>
+                </div>
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${rate}%` }} />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">{data.won} ganados de {data.total} totales</p>
+              </div>
+            );
+          })}
         </ReportCard>
 
         {/* By Policy Type */}

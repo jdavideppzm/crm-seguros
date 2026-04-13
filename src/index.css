@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -34,7 +34,10 @@
     --input: 220 13% 91%;
     --ring: 221 83% 53%;
 
-    --radius: 8px;
+    --radius: 12px;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --glass-blur: 8px;
+    --font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 
     /* Sidebar - dark theme */
     --sidebar-bg: 222 47% 11%;
@@ -64,6 +67,43 @@
     --sidebar-border-default: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 47% 14%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 47% 14%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 222 47% 14%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 47% 15%;
+    --input: 222 47% 15%;
+    --ring: 160 84% 39%;
+
+    --sidebar-bg: 222 47% 5%;
+    --sidebar-fg: 210 40% 80%;
+    --sidebar-fg-bright: 0 0% 100%;
+    --sidebar-hover: 222 47% 12%;
+    --sidebar-active: 160 84% 39%;
+    --sidebar-border: 222 47% 12%;
+  }
 }
 
 @layer base {
@@ -73,10 +113,21 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-family);
     font-size: 0.875rem;
     line-height: 1.5;
   }
+
+  /* Dynamic border radius for all rounded-xl, rounded-lg, etc. if we want global control */
+  .rounded-xl { border-radius: var(--radius); }
+  .rounded-2xl { border-radius: calc(var(--radius) * 1.5); }
+  .rounded-3xl { border-radius: calc(var(--radius) * 2); }
+  .rounded-lg { border-radius: calc(var(--radius) * 0.75); }
+  
+  .shadow-sm { box-shadow: var(--card-shadow); }
+  .shadow-md { box-shadow: var(--card-shadow); }
+  .shadow-lg { box-shadow: var(--card-shadow); }
+  .shadow-xl { box-shadow: var(--card-shadow); }
 
   .font-mono {
     font-family: 'JetBrains Mono', monospace;

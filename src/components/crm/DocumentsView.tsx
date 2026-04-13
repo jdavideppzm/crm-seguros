@@ -22,18 +22,76 @@ export function DocumentsView({ lead, onUpdateLead }: DocumentsViewProps) {
   const handleUpload = (label: string) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".pdf";
+    input.accept = ".pdf,.png,.jpg,.jpeg";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      if (!file.name.toLowerCase().endsWith(".pdf")) { alert("Solo se permiten archivos PDF."); return; }
+
+      const isCotizacion = COTIZACION_LABELS.includes(label);
       let aseguradora: string | undefined;
-      if (COTIZACION_LABELS.includes(label)) {
+
+      if (isCotizacion) {
         aseguradora = prompt("Nombre de la aseguradora para esta cotización:") || undefined;
       }
-      const newDoc: LeadDocument = { id: Date.now().toString(), label, fileName: file.name, fileUrl: URL.createObjectURL(file), uploadedAt: new Date().toLocaleString("es-CO"), uploadedBy: "Usuario", aseguradora };
+
+      const newDoc: LeadDocument = {
+        id: Date.now().toString(),
+        label,
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        uploadedAt: new Date().toLocaleString("es-CO"),
+        uploadedBy: "Usuario",
+        aseguradora,
+      };
+
       const updatedDocs = [...documents.filter((d) => d.label !== label), newDoc];
-      onUpdateLead({ ...lead, documents: updatedDocs });
+
+      // --- Auto-activity for cotizaciones ---
+      const currentActivities: Activity[] = [...(lead.activities || [])];
+
+      if (isCotizacion) {
+        const fmt = (n: number) =>
+          new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+
+        const lines = [
+          `📥 Cotización recibida — ${aseguradora || label}`,
+          `━━━━━━━━━━━━━━━━━━━━━━━━`,
+          // Insured person
+          `👤 Asegurado: ${lead.propietario}`,
+          lead.tipoIdentificacion && lead.numeroIdentificacion
+            ? `   ID: ${lead.tipoIdentificacion} ${lead.numeroIdentificacion}`
+            : null,
+          lead.fechaNacimiento ? `   Nacimiento: ${lead.fechaNacimiento}` : null,
+          // Vehicle
+          lead.placa ? `🚗 Placa: ${lead.placa}` : null,
+          (lead.marca || lead.referenciaVehiculo)
+            ? `   Vehículo: ${[lead.marca, lead.referenciaVehiculo, lead.modelo].filter(Boolean).join(" ")}`
+            : null,
+          lead.colorVehiculo ? `   Color: ${lead.colorVehiculo}` : null,
+          lead.tipoServicio ? `   Servicio: ${lead.tipoServicio}` : null,
+          lead.lugar ? `   Ciudad: ${lead.lugar}` : null,
+          // Amounts
+          lead.monto ? `💰 Valor asegurado: ${fmt(lead.monto)}` : null,
+          lead.valorPrima ? `   Prima estimada: ${fmt(lead.valorPrima)}` : null,
+          // Policy
+          lead.tipPoliza ? `🛡 Tipo póliza: ${lead.tipPoliza}` : null,
+          lead.tipoSeguro ? `   Ramo: ${lead.tipoSeguro}` : null,
+          ``,
+          `📄 Archivo: ${file.name}`,
+          `🏢 Aseguradora: ${aseguradora || "Por confirmar"}`,
+          `🕐 Subido: ${new Date().toLocaleString("es-CO")}`,
+        ].filter((l) => l !== null).join("\n");
+
+        currentActivities.unshift({
+          id: Date.now().toString() + "_cotz",
+          type: "doc_summary",
+          text: lines,
+          author: "Sistema",
+          createdAt: new Date().toLocaleString("es-CO"),
+        });
+      }
+
+      onUpdateLead({ ...lead, documents: updatedDocs, activities: currentActivities });
     };
     input.click();
   };
