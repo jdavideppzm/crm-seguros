@@ -190,6 +190,29 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
     }
   };
 
+  const handleToggleRole = async (profile: ManagedUser) => {
+    const newRole = profile.role === "admin" ? "vendedor" : "admin";
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .upsert({ 
+          user_id: profile.user_id, 
+          role: newRole 
+        }, { onConflict: "user_id" });
+      
+      if (error) throw error;
+      
+      const updatedUsers = config.users.map(u => u.email === profile.email ? { ...u, role: newRole as any } : u);
+      updateConfig({ users: updatedUsers });
+      
+      toast.success(`Rol de ${profile.display_name} cambiado a ${newRole.toUpperCase()}`);
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error changing role:", error);
+      toast.error("Error al cambiar el rol del usuario");
+    }
+  };
+
   const formatCurrency = (val: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
 
   if (!isAdmin) {
@@ -382,16 +405,20 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                 </div>
                 
                 <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
-                  <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest leading-none ${
-                    u.role === "admin" 
-                      ? "bg-primary/10 text-primary border border-primary/20" 
-                      : "bg-muted text-muted-foreground border border-border/50"
-                  }`}>
+                  <button
+                    onClick={() => handleToggleRole(u)}
+                    className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest leading-none transition-all active:scale-90 ${
+                      u.role === "admin" 
+                        ? "bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30" 
+                        : "bg-muted text-muted-foreground border border-border/50 hover:bg-muted-foreground/10"
+                    }`}
+                    title="Click para cambiar rol"
+                  >
                     {u.role}
-                  </span>
+                  </button>
                   <button
                     onClick={() => handleToggleActive(u)}
-                    className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest transition-all leading-none ${
+                    className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest transition-all leading-none active:scale-95 ${
                       u.active 
                         ? "bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20" 
                         : "bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20"
