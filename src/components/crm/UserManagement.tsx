@@ -353,16 +353,16 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Sincronizando perfiles...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           {users.map(u => (
-            <div key={u.id} className="group p-6 rounded-[2.5rem] border border-border bg-card hover:bg-muted/10 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/5">
+            <div key={u.id} className="group p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-border bg-card hover:bg-muted/10 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className={`shrink-0 relative w-12 h-12 rounded-2xl flex items-center justify-center text-base font-black shadow-inner transition-transform group-hover:rotate-3 group-hover:scale-110 duration-500 ${
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                  <div className={`shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-sm sm:text-base font-black shadow-inner transition-transform group-hover:rotate-3 group-hover:scale-110 duration-500 ${
                     u.role === "admin" ? "bg-primary text-primary-foreground" : "bg-muted-foreground/10 text-muted-foreground"
                   }`}>
                     {u.display_name.charAt(0).toUpperCase()}
-                    {u.active && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background animate-pulse" />}
+                    {u.active && <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-500 border-2 border-background animate-pulse" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     {editingId === u.user_id ? (
@@ -375,39 +375,39 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                             if (e.key === "Enter") handleUpdateDisplayName(u.user_id);
                             if (e.key === "Escape") setEditingId(null);
                           }}
-                          className="text-sm font-black bg-background border border-primary/40 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-primary/20 w-full"
+                          className="text-xs sm:text-sm font-black bg-background border border-primary/40 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-primary/20 w-full"
                         />
                         <button 
                           onClick={() => handleUpdateDisplayName(u.user_id)}
-                          className="p-1.5 rounded-lg bg-primary text-primary-foreground hover:scale-110 transition-transform"
+                          className="p-1 px-2 rounded-lg bg-primary text-primary-foreground hover:scale-105 transition-transform"
                         >
-                          <Check size={14} />
+                          <Check size={12} />
                         </button>
                         <button 
                           onClick={() => setEditingId(null)}
-                          className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-muted-foreground/10 transition-colors"
+                          className="p-1 px-2 rounded-lg bg-muted text-muted-foreground hover:bg-muted-foreground/10 transition-colors"
                         >
-                          <X size={14} />
+                          <X size={12} />
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 group/name cursor-pointer" onClick={() => { setEditingId(u.user_id); setTempName(u.display_name); }}>
-                        <p className="text-base font-black text-foreground group-hover/name:text-primary transition-colors tracking-tight truncate">
+                        <p className="text-sm sm:text-base font-black text-foreground group-hover/name:text-primary transition-colors tracking-tight truncate">
                           {u.display_name}
                         </p>
-                        <Edit2 size={12} className="shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                        <Edit2 size={10} className="shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
                       </div>
                     )}
-                    <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider flex items-center gap-1.5 mt-0.5 truncate">
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-mono tracking-wider flex items-center gap-1.5 mt-0.5 truncate">
                        <Mail size={10} className="shrink-0 opacity-50" /> {u.email}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
+                <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0 self-end sm:self-center">
                   <button
                     onClick={() => handleToggleRole(u)}
-                    className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest leading-none transition-all active:scale-90 ${
+                    className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-2.5 py-1 rounded-lg uppercase tracking-widest leading-none transition-all active:scale-90 ${
                       u.role === "admin" 
                         ? "bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30" 
                         : "bg-muted text-muted-foreground border border-border/50 hover:bg-muted-foreground/10"
@@ -418,7 +418,7 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                   </button>
                   <button
                     onClick={() => handleToggleActive(u)}
-                    className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest transition-all leading-none active:scale-95 ${
+                    className={`text-[8px] sm:text-[9px] font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full uppercase tracking-widest transition-all leading-none active:scale-95 ${
                       u.active 
                         ? "bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20" 
                         : "bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20"
@@ -429,12 +429,12 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                 </div>
               </div>
               
-              <div className="mt-8 pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                 <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
-                    <div className="flex items-center justify-between mb-3">
+              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                 <div className="bg-primary/5 p-3.5 sm:p-4 rounded-3xl border border-primary/10">
+                    <div className="flex items-center justify-between mb-2 sm:mb-3">
                        <div className="flex items-center gap-2">
-                          <DollarSign size={14} className="text-primary" />
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meta de Volumen</span>
+                          <DollarSign size={13} className="text-primary" />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meta de Volumen</span>
                        </div>
                     </div>
                     <div className="relative group/goal">
@@ -442,17 +442,17 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                          type="number" 
                          value={u.monthlyGoal} 
                          onChange={(e) => handleUpdateGoals(u.user_id, { monthlyGoal: Number(e.target.value) })}
-                         className="w-full bg-background/50 border border-border/60 rounded-xl px-4 py-2 text-xs font-black text-foreground outline-none focus:border-primary transition-all group-hover/goal:bg-background"
+                         className="w-full bg-background/50 border border-border/60 rounded-xl px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-black text-foreground outline-none focus:border-primary transition-all group-hover/goal:bg-background"
                        />
-                       <p className="mt-2 text-[10px] font-bold text-muted-foreground/60">{formatCurrency(u.monthlyGoal)}</p>
+                       <p className="mt-1.5 sm:mt-2 text-[9px] sm:text-[10px] font-bold text-muted-foreground/60">{formatCurrency(u.monthlyGoal)}</p>
                     </div>
                  </div>
 
-                 <div className="bg-violet-500/5 p-4 rounded-3xl border border-violet-500/10">
-                    <div className="flex items-center justify-between mb-3">
+                 <div className="bg-violet-500/5 p-3.5 sm:p-4 rounded-3xl border border-violet-500/10">
+                    <div className="flex items-center justify-between mb-2 sm:mb-3">
                        <div className="flex items-center gap-2">
-                          <Package size={14} className="text-violet-500" />
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meta de Unidades</span>
+                          <Package size={13} className="text-violet-500" />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meta de Unidades</span>
                        </div>
                     </div>
                     <div className="relative group/unit">
@@ -460,9 +460,9 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                          type="number" 
                          value={u.monthlySalesCountGoal} 
                          onChange={(e) => handleUpdateGoals(u.user_id, { monthlySalesCountGoal: Number(e.target.value) })}
-                         className="w-full bg-background/50 border border-border/60 rounded-xl px-4 py-2 text-xs font-black text-foreground outline-none focus:border-violet-500 transition-all group-hover/unit:bg-background"
+                         className="w-full bg-background/50 border border-border/60 rounded-xl px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-black text-foreground outline-none focus:border-violet-500 transition-all group-hover/unit:bg-background"
                        />
-                       <p className="mt-2 text-[10px] font-bold text-muted-foreground/60">Objetivo: {u.monthlySalesCountGoal} ventas</p>
+                       <p className="mt-1.5 sm:mt-2 text-[9px] sm:text-[10px] font-bold text-muted-foreground/60">Objetivo: {u.monthlySalesCountGoal} ventas</p>
                     </div>
                  </div>
               </div>
