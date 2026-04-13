@@ -333,15 +333,15 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {users.map(u => (
             <div key={u.id} className="group p-6 rounded-[2.5rem] border border-border bg-card hover:bg-muted/10 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-5">
-                  <div className={`relative w-14 h-14 rounded-[1.25rem] flex items-center justify-center text-lg font-black shadow-inner transition-transform group-hover:rotate-3 group-hover:scale-110 duration-500 ${
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className={`shrink-0 relative w-12 h-12 rounded-2xl flex items-center justify-center text-base font-black shadow-inner transition-transform group-hover:rotate-3 group-hover:scale-110 duration-500 ${
                     u.role === "admin" ? "bg-primary text-primary-foreground" : "bg-muted-foreground/10 text-muted-foreground"
                   }`}>
                     {u.display_name.charAt(0).toUpperCase()}
-                    {u.active && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-4 border-background animate-pulse" />}
+                    {u.active && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background animate-pulse" />}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     {editingId === u.user_id ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -372,17 +372,17 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                         <p className="text-base font-black text-foreground group-hover/name:text-primary transition-colors tracking-tight truncate">
                           {u.display_name}
                         </p>
-                        <Edit2 size={12} className="text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                        <Edit2 size={12} className="shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
                       </div>
                     )}
-                    <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider flex items-center gap-1.5 mt-1 truncate">
-                       <Mail size={10} className="opacity-50" /> {u.email}
+                    <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider flex items-center gap-1.5 mt-0.5 truncate">
+                       <Mail size={10} className="shrink-0 opacity-50" /> {u.email}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end gap-2 text-right">
-                  <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest ${
+                <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
+                  <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest leading-none ${
                     u.role === "admin" 
                       ? "bg-primary/10 text-primary border border-primary/20" 
                       : "bg-muted text-muted-foreground border border-border/50"
@@ -391,7 +391,7 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                   </span>
                   <button
                     onClick={() => handleToggleActive(u)}
-                    className={`text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest transition-all ${
+                    className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest transition-all leading-none ${
                       u.active 
                         ? "bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20" 
                         : "bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20"
