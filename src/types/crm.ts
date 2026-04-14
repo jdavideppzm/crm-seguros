@@ -232,7 +232,7 @@ export const ALL_STATUSES: PipelineStatus[] = [
   "nuevo", "contactado", "cotizacion", "seguimiento", "emitido", "ganado", "perdido",
 ];
 
-export const USERS = ["Carlos M.", "Ana R.", "Pedro L.", "María G."];
+export const USERS: string[] = [];
 
 export type ClientType = "natural" | "juridica" | "cero_km";
 
@@ -522,12 +522,7 @@ export interface CrmUser {
   monthlySalesCountGoal?: number;
 }
 
-export const DEFAULT_CRM_USERS: CrmUser[] = [
-  { id: "u1", name: "Carlos M.", email: "carlos@crm.com", role: "admin", active: true, monthlyGoal: 150000000 },
-  { id: "u2", name: "Ana R.", email: "ana@crm.com", role: "vendedor", active: true, monthlyGoal: 100000000 },
-  { id: "u3", name: "Pedro L.", email: "pedro@crm.com", role: "vendedor", active: true, monthlyGoal: 50000000 },
-  { id: "u4", name: "María G.", email: "maria@crm.com", role: "vendedor", active: true, monthlyGoal: 50000000 },
-];
+export const DEFAULT_CRM_USERS: CrmUser[] = [];
 
 // === CRM Config Types ===
 

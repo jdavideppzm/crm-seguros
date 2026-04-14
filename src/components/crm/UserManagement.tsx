@@ -72,13 +72,17 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
   };
 
   const syncProfilesWithConfig = (profiles: ManagedUser[]) => {
-    const existingEmails = config.users.map(u => u.email);
-    const newUsers: CrmUser[] = [...config.users];
-    let changed = false;
+    const profileEmails = profiles.map(p => p.email);
+    const existingEmailsInConfig = config.users.map(u => u.email);
+    
+    // 1. Remove users from config that are no longer in profiles
+    let updatedUsers = config.users.filter(u => profileEmails.includes(u.email));
+    let changed = updatedUsers.length !== config.users.length;
 
+    // 2. Add new users from profiles to config
     profiles.forEach(p => {
-      if (!existingEmails.includes(p.email)) {
-        newUsers.push({
+      if (!existingEmailsInConfig.includes(p.email)) {
+        updatedUsers.push({
           id: p.user_id,
           name: p.display_name,
           email: p.email,
@@ -92,7 +96,7 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
     });
 
     if (changed) {
-      updateConfig({ users: newUsers });
+      updateConfig({ users: updatedUsers });
     }
   };
 
