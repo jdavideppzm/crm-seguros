@@ -78,7 +78,25 @@ export function useLeads() {
           .maybeSingle();
         
         if (configData?.config_data) {
-          setConfig(configData.config_data as any);
+          const loadedConfig = configData.config_data as any;
+          
+          // 2.1 Auto-cleanup ghost users from config if they don't exist in profiles
+          const { data: profiles } = await supabase.from("profiles").select("email");
+          if (profiles && loadedConfig.users) {
+            const profileEmails = profiles.map(p => p.email);
+            const filteredUsers = loadedConfig.users.filter((u: any) => profileEmails.includes(u.email));
+            
+            if (filteredUsers.length !== loadedConfig.users.length) {
+              console.log("[useLeads] Auto-cleaning ghost users from config");
+              loadedConfig.users = filteredUsers;
+              // Silently update if we found ghosts
+              setConfig(loadedConfig);
+            } else {
+              setConfig(loadedConfig);
+            }
+          } else {
+            setConfig(loadedConfig);
+          }
         }
 
         // 3. Fetch Alerts
