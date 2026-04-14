@@ -217,6 +217,30 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
     }
   };
 
+  const handleDeleteProfile = async (profile: ManagedUser) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${profile.display_name}? Esta acción borrará su perfil y accesos del sistema.`)) return;
+    
+    try {
+      // Delete user roles
+      await supabase.from("user_roles").delete().eq("user_id", profile.user_id);
+      
+      // Delete profile
+      const { error } = await supabase.from("profiles").delete().eq("user_id", profile.user_id);
+      
+      if (error) throw error;
+      
+      // Cleanup locally immediately
+      const updatedUsers = config.users.filter(u => u.email !== profile.email && u.id !== profile.user_id);
+      updateConfig({ users: updatedUsers });
+      
+      toast.success(`Usuario ${profile.display_name} eliminado`);
+      await fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting profile:", error);
+      toast.error("Error al eliminar: " + error.message);
+    }
+  };
+
   const formatCurrency = (val: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
 
   if (!isAdmin) {
@@ -243,14 +267,23 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{users.length} perfiles con objetivos comerciales</p>
            </div>
         </div>
-        {!showCreate && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+            onClick={() => fetchUsers()}
+            className="p-2 rounded-xl bg-background border border-border text-muted-foreground hover:text-foreground transition-all active:scale-95"
+            title="Sincronizar perfiles"
           >
-            <Plus size={16} /> Crear Acceso
+            <Activity size={16} />
           </button>
-        )}
+          {!showCreate && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+            >
+              <Plus size={16} /> Crear Acceso
+            </button>
+          )}
+        </div>
       </div>
 
       {showCreate && (
@@ -429,6 +462,13 @@ export function UserManagement({ config, updateConfig }: UserManagementProps) {
                     }`}
                   >
                     {u.active ? "Activo" : "Inactivo"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProfile(u)}
+                    className="p-1 px-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90"
+                    title="Eliminar perfil definitivamente"
+                  >
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>
