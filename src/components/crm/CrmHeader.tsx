@@ -20,7 +20,6 @@ export function CrmHeader({ title, subtitle, searchQuery, onSearchChange, onTogg
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { displayName, signOut, isAdmin } = useAuth();
-  const { displayName, signOut, isAdmin } = useAuth();
 
 console.log("CRMH HEADER - isAdmin:", isAdmin);
 console.log("CRMH HEADER - displayName:", displayName);
