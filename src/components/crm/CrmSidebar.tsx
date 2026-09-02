@@ -261,12 +261,15 @@ export function CrmSidebar({
 
       </div>
 
-      {/* Panel de Control — at the bottom */}
-      <PermissionGuard section="settings" fallback={null}>
-        <div className="px-3 pt-4 pb-6 border-t border-[#1E2228]">
-          <NavItem icon={<Settings size={16} />} label="Panel de Control" active={activeView === "settings"} onClick={() => onViewChange("settings")} />
-        </div>
-      </PermissionGuard>
+      {/* Panel de Control */}
+<div className="px-3 pt-4 pb-6 border-t border-[#1E2228]">
+  <NavItem
+    icon={<Settings size={16} />}
+    label="Panel de Control"
+    active={activeView === "settings"}
+    onClick={() => onViewChange("settings")}
+  />
+</div>
     </aside>
   );
 }
